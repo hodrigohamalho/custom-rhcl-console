@@ -15,9 +15,9 @@ import {
   Stack,
   StackItem,
 } from '@patternfly/react-core';
-import { ExclamationTriangleIcon } from '@patternfly/react-icons';
+import { ExclamationTriangleIcon, SearchIcon } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
-import { usePrometheusTraffic } from '../../hooks/usePrometheusTraffic';
+import { usePrometheusTraffic, TrafficData } from '../../hooks/usePrometheusTraffic';
 import { TrafficCharts } from './TrafficChart';
 
 interface TrafficPanelProps {
@@ -25,15 +25,21 @@ interface TrafficPanelProps {
   name: string;
   namespace: string;
   pollInterval?: number;
+  gatewayClass?: string;
 }
 
-const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, pollInterval }) => {
+function hasAnyData(data: TrafficData): boolean {
+  return Object.values(data).some((v) => v !== null);
+}
+
+const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, pollInterval, gatewayClass }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const { data, loaded, metricsAvailable } = usePrometheusTraffic(
     kind,
     name,
     namespace,
     pollInterval,
+    gatewayClass,
   );
 
   if (!loaded) {
@@ -66,6 +72,35 @@ const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, poll
           </EmptyState>
         </CardBody>
       </Card>
+    );
+  }
+
+  if (!hasAnyData(data)) {
+    return (
+      <Stack hasGutter>
+        <StackItem>
+          <Card>
+            <CardTitle>{t('Metrics')}</CardTitle>
+            <CardBody>
+              <EmptyState
+                variant="sm"
+                icon={SearchIcon}
+                titleText={t('No traffic data')}
+                headingLevel="h3"
+              >
+                <EmptyStateBody>
+                  {t(
+                    'No traffic has been recorded for this resource. Metrics will appear once traffic is flowing.',
+                  )}
+                </EmptyStateBody>
+              </EmptyState>
+            </CardBody>
+          </Card>
+        </StackItem>
+        <StackItem>
+          <TrafficCharts kind={kind} name={name} namespace={namespace} gatewayClass={gatewayClass} />
+        </StackItem>
+      </Stack>
     );
   }
 
@@ -114,7 +149,7 @@ const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, poll
         </Card>
       </StackItem>
       <StackItem>
-        <TrafficCharts kind={kind} name={name} namespace={namespace} />
+        <TrafficCharts kind={kind} name={name} namespace={namespace} gatewayClass={gatewayClass} />
       </StackItem>
     </Stack>
   );

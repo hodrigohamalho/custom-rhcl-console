@@ -170,7 +170,7 @@ const GatewayDetailPage: React.FC = () => {
 
           <Tab eventKey={3} title={<TabTitleText>{t('Metrics')}</TabTitleText>}>
             <div style={{ marginTop: 16 }}>
-              <TrafficPanel kind="Gateway" name={name || ''} namespace={ns || ''} />
+              <TrafficPanel kind="Gateway" name={name || ''} namespace={ns || ''} gatewayClass={gateway.spec?.gatewayClassName} />
             </div>
           </Tab>
 

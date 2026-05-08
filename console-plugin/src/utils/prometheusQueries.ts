@@ -1,6 +1,21 @@
 /**
- * PromQL query builders for Envoy sidecar metrics.
- * These target the metrics already scraped by RHCL user-workload monitoring.
+ * PromQL query builders for Istio telemetry metrics scraped by RHCL user-workload monitoring.
+ *
+ * Assumed metrics (from Istio / Kuadrant ServiceMonitor):
+ *   - istio_requests_total                          — request counter with response code
+ *   - istio_request_duration_milliseconds_bucket    — latency histogram
+ *
+ * Expected labels:
+ *   - reporter                        — "source" (gateway) or "destination" (backend)
+ *   - namespace                       — pod namespace (used for Gateway filtering)
+ *   - destination_service_namespace   — target service namespace (used for HTTPRoute filtering)
+ *   - source_workload                 — Gateway workload name: "<gateway_name>-<gateway_class>"
+ *   - destination_service_name        — target Service name (used for HTTPRoute filtering)
+ *   - response_code                   — HTTP status code (e.g. "200", "404")
+ *
+ * To verify which metrics exist, run in the Thanos/Prometheus UI:
+ *   istio_requests_total{namespace="<gateway-ns>"}
+ *   istio_requests_total{destination_service_namespace="<route-ns>"}
  */
 
 export function requestRateQuery(
@@ -8,11 +23,10 @@ export function requestRateQuery(
   name: string,
   kind: 'Gateway' | 'HTTPRoute',
   window: '1m' | '5m' = '5m',
+  gatewayClass?: string,
 ): string {
-  if (kind === 'Gateway') {
-    return `sum(rate(envoy_http_downstream_rq_total{namespace="${namespace}", gateway_name="${name}"}[${window}]))`;
-  }
-  return `sum(rate(envoy_http_downstream_rq_total{namespace="${namespace}", route_name="${name}"}[${window}]))`;
+  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  return `sum(rate(istio_requests_total{${filter}}[${window}]))`;
 }
 
 export function statusCodeRateQuery(
@@ -21,10 +35,11 @@ export function statusCodeRateQuery(
   kind: 'Gateway' | 'HTTPRoute',
   codeClass: '2xx' | '4xx' | '5xx',
   window = '5m',
+  gatewayClass?: string,
 ): string {
   const codePattern = codeClass === '2xx' ? '2..' : codeClass === '4xx' ? '4..' : '5..';
-  const labelKey = kind === 'Gateway' ? 'gateway_name' : 'route_name';
-  return `sum(rate(envoy_http_downstream_rq_total{namespace="${namespace}", ${labelKey}="${name}", envoy_response_code=~"${codePattern}"}[${window}]))`;
+  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  return `sum(rate(istio_requests_total{${filter}, response_code=~"${codePattern}"}[${window}]))`;
 }
 
 export function latencyPercentileQuery(
@@ -33,9 +48,10 @@ export function latencyPercentileQuery(
   kind: 'Gateway' | 'HTTPRoute',
   percentile: 0.5 | 0.95 | 0.99,
   window = '5m',
+  gatewayClass?: string,
 ): string {
-  const labelKey = kind === 'Gateway' ? 'gateway_name' : 'route_name';
-  return `histogram_quantile(${percentile}, sum(rate(envoy_http_downstream_rq_time_bucket{namespace="${namespace}", ${labelKey}="${name}"}[${window}])) by (le))`;
+  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  return `histogram_quantile(${percentile}, sum(rate(istio_request_duration_milliseconds_bucket{${filter}}[${window}])) by (le))`;
 }
 
 export function successRateQuery(
@@ -43,10 +59,10 @@ export function successRateQuery(
   name: string,
   kind: 'Gateway' | 'HTTPRoute',
   window = '5m',
+  gatewayClass?: string,
 ): string {
-  const labelKey = kind === 'Gateway' ? 'gateway_name' : 'route_name';
-  const base = `envoy_http_downstream_rq_total{namespace="${namespace}", ${labelKey}="${name}"}`;
-  return `sum(rate(${base.replace('}', ', envoy_response_code=~"[23].."}')}[${window}])) / sum(rate(${base}[${window}])) * 100`;
+  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  return `sum(rate(istio_requests_total{${filter}, response_code=~"[23].."}[${window}])) / sum(rate(istio_requests_total{${filter}}[${window}])) * 100`;
 }
 
 export function trafficOverTimeQuery(
@@ -54,9 +70,10 @@ export function trafficOverTimeQuery(
   name: string,
   kind: 'Gateway' | 'HTTPRoute',
   window = '5m',
+  gatewayClass?: string,
 ): string {
-  const labelKey = kind === 'Gateway' ? 'gateway_name' : 'route_name';
-  return `sum(rate(envoy_http_downstream_rq_total{namespace="${namespace}", ${labelKey}="${name}"}[${window}]))`;
+  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  return `sum(rate(istio_requests_total{${filter}}[${window}]))`;
 }
 
 export function statusCodeRateRangeQuery(
@@ -65,10 +82,11 @@ export function statusCodeRateRangeQuery(
   kind: 'Gateway' | 'HTTPRoute',
   codeClass: '2xx' | '4xx' | '5xx',
   window = '5m',
+  gatewayClass?: string,
 ): string {
   const codePattern = codeClass === '2xx' ? '2..' : codeClass === '4xx' ? '4..' : '5..';
-  const labelKey = kind === 'Gateway' ? 'gateway_name' : 'route_name';
-  return `sum(rate(envoy_http_downstream_rq_total{namespace="${namespace}", ${labelKey}="${name}", envoy_response_code=~"${codePattern}"}[${window}]))`;
+  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  return `sum(rate(istio_requests_total{${filter}, response_code=~"${codePattern}"}[${window}]))`;
 }
 
 export function latencyPercentileRangeQuery(
@@ -77,7 +95,16 @@ export function latencyPercentileRangeQuery(
   kind: 'Gateway' | 'HTTPRoute',
   percentile: 0.5 | 0.95 | 0.99,
   window = '5m',
+  gatewayClass?: string,
 ): string {
-  const labelKey = kind === 'Gateway' ? 'gateway_name' : 'route_name';
-  return `histogram_quantile(${percentile}, sum(rate(envoy_http_downstream_rq_time_bucket{namespace="${namespace}", ${labelKey}="${name}"}[${window}])) by (le))`;
+  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  return `histogram_quantile(${percentile}, sum(rate(istio_request_duration_milliseconds_bucket{${filter}}[${window}])) by (le))`;
+}
+
+function kindFilter(namespace: string, name: string, kind: 'Gateway' | 'HTTPRoute', gatewayClass?: string): string {
+  if (kind === 'Gateway') {
+    const workload = gatewayClass ? `${name}-${gatewayClass}` : name;
+    return `reporter="source", namespace="${namespace}", source_workload="${workload}"`;
+  }
+  return `destination_service_namespace="${namespace}", destination_service_name="${name}"`;
 }

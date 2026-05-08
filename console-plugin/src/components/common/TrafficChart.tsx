@@ -8,7 +8,7 @@ import {
   ChartVoronoiContainer,
   ChartThemeColor,
 } from '@patternfly/react-charts';
-import { Card, CardTitle, CardBody, Spinner } from '@patternfly/react-core';
+import { Card, CardTitle, CardBody, Grid, GridItem, Spinner } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { usePrometheusRange, TimeSeries } from '../../hooks/usePrometheusRange';
 import {
@@ -21,12 +21,14 @@ interface TrafficChartProps {
   kind: 'Gateway' | 'HTTPRoute';
   name: string;
   namespace: string;
+  gatewayClass?: string;
 }
 
 const REQUEST_COLORS = ['#3E8635', '#F0AB00', '#C9190B'];
 const LATENCY_COLORS = ['#06C', '#8481DD', '#EC7A08'];
 
-function formatTime(date: Date): string {
+function formatTime(value: Date | number): string {
+  const date = value instanceof Date ? value : new Date(value);
   return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
@@ -64,7 +66,7 @@ const RequestRateChart: React.FC<{ series: TimeSeries[] }> = ({ series }) => {
             themeColor={ChartThemeColor.multiUnordered}
           >
             <ChartAxis
-              tickFormat={(t: Date) => formatTime(t)}
+              tickFormat={(t: Date | number) => formatTime(t)}
               fixLabelOverlap
             />
             <ChartAxis dependentAxis tickFormat={(t: number) => `${t.toFixed(1)}`} />
@@ -119,7 +121,7 @@ const LatencyChart: React.FC<{ series: TimeSeries[] }> = ({ series }) => {
             themeColor={ChartThemeColor.multiUnordered}
           >
             <ChartAxis
-              tickFormat={(t: Date) => formatTime(t)}
+              tickFormat={(t: Date | number) => formatTime(t)}
               fixLabelOverlap
             />
             <ChartAxis dependentAxis tickFormat={(t: number) => `${t.toFixed(0)}ms`} />
@@ -140,29 +142,29 @@ const LatencyChart: React.FC<{ series: TimeSeries[] }> = ({ series }) => {
   );
 };
 
-export const TrafficCharts: React.FC<TrafficChartProps> = ({ kind, name, namespace }) => {
+export const TrafficCharts: React.FC<TrafficChartProps> = ({ kind, name, namespace, gatewayClass }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
 
   const rateQueries = React.useMemo(
     () => [
-      { label: '2xx', query: statusCodeRateRangeQuery(namespace, name, kind, '2xx') },
-      { label: '4xx', query: statusCodeRateRangeQuery(namespace, name, kind, '4xx') },
-      { label: '5xx', query: statusCodeRateRangeQuery(namespace, name, kind, '5xx') },
+      { label: '2xx', query: statusCodeRateRangeQuery(namespace, name, kind, '2xx', '5m', gatewayClass) },
+      { label: '4xx', query: statusCodeRateRangeQuery(namespace, name, kind, '4xx', '5m', gatewayClass) },
+      { label: '5xx', query: statusCodeRateRangeQuery(namespace, name, kind, '5xx', '5m', gatewayClass) },
     ],
-    [namespace, name, kind],
+    [namespace, name, kind, gatewayClass],
   );
 
   const latencyQueries = React.useMemo(
     () => [
-      { label: 'p50', query: latencyPercentileRangeQuery(namespace, name, kind, 0.5) },
-      { label: 'p95', query: latencyPercentileRangeQuery(namespace, name, kind, 0.95) },
-      { label: 'p99', query: latencyPercentileRangeQuery(namespace, name, kind, 0.99) },
+      { label: 'p50', query: latencyPercentileRangeQuery(namespace, name, kind, 0.5, '5m', gatewayClass) },
+      { label: 'p95', query: latencyPercentileRangeQuery(namespace, name, kind, 0.95, '5m', gatewayClass) },
+      { label: 'p99', query: latencyPercentileRangeQuery(namespace, name, kind, 0.99, '5m', gatewayClass) },
     ],
-    [namespace, name, kind],
+    [namespace, name, kind, gatewayClass],
   );
 
-  const { series: rateSeries, loaded: rateLoaded } = usePrometheusRange(rateQueries, 3600, 60);
-  const { series: latencySeries, loaded: latencyLoaded } = usePrometheusRange(latencyQueries, 3600, 60);
+  const { series: rateSeries, loaded: rateLoaded } = usePrometheusRange(rateQueries, namespace, 3600, 60);
+  const { series: latencySeries, loaded: latencyLoaded } = usePrometheusRange(latencyQueries, namespace, 3600, 60);
 
   if (!rateLoaded || !latencyLoaded) {
     return (
@@ -174,20 +176,24 @@ export const TrafficCharts: React.FC<TrafficChartProps> = ({ kind, name, namespa
   }
 
   return (
-    <>
-      <RequestRateChart series={rateSeries} />
-      <LatencyChart series={latencySeries} />
-    </>
+    <Grid hasGutter>
+      <GridItem span={6}>
+        <RequestRateChart series={rateSeries} />
+      </GridItem>
+      <GridItem span={6}>
+        <LatencyChart series={latencySeries} />
+      </GridItem>
+    </Grid>
   );
 };
 
-export const TrafficSparkline: React.FC<TrafficChartProps> = ({ kind, name, namespace }) => {
+export const TrafficSparkline: React.FC<TrafficChartProps> = ({ kind, name, namespace, gatewayClass }) => {
   const queries = React.useMemo(
-    () => [{ label: 'req/s', query: trafficOverTimeQuery(namespace, name, kind) }],
-    [namespace, name, kind],
+    () => [{ label: 'req/s', query: trafficOverTimeQuery(namespace, name, kind, '5m', gatewayClass) }],
+    [namespace, name, kind, gatewayClass],
   );
 
-  const { series, loaded } = usePrometheusRange(queries, 3600, 120);
+  const { series, loaded } = usePrometheusRange(queries, namespace, 3600, 120);
 
   if (!loaded || !series[0]?.data.length) {
     return null;
