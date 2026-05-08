@@ -1,4 +1,5 @@
 import * as React from 'react';
+import '../../plugin.css';
 import { Link } from 'react-router-dom';
 import { PageSection, Title, Spinner, Bullseye } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
@@ -65,10 +66,10 @@ const GatewayListPage: React.FC = () => {
   if (!loaded) {
     return (
       <>
-        <PageSection className="co-m-pane__body">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('Gateways')}</Title>
-        </PageSection>
-        <PageSection isFilled className="co-m-pane__body">
+        </div>
+        <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
       </>
@@ -78,27 +79,27 @@ const GatewayListPage: React.FC = () => {
   if (!hasAccess) {
     return (
       <>
-        <PageSection className="co-m-pane__body">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('Gateways')}</Title>
-        </PageSection>
-        <PageSection className="co-m-pane__body">
+        </div>
+        <div className="rhcl-page-content">
           <EmptyRBACState
             resource={t('Gateways')}
             verb="list"
             group="gateway.networking.k8s.io"
             kind="Gateway"
           />
-        </PageSection>
+        </div>
       </>
     );
   }
 
   return (
     <>
-      <PageSection className="co-m-pane__body">
+      <div className="rhcl-page-content">
         <Title headingLevel="h1">{t('Gateways')}</Title>
-      </PageSection>
-      <PageSection className="co-m-pane__body">
+      </div>
+      <div className="rhcl-page-content">
         <FilterToolbar
           searchValue={searchValue}
           onSearchChange={setSearchValue}
@@ -126,7 +127,7 @@ const GatewayListPage: React.FC = () => {
             ))}
           </Tbody>
         </Table>
-      </PageSection>
+      </div>
     </>
   );
 };

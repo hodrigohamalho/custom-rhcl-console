@@ -1,4 +1,5 @@
 import * as React from 'react';
+import '../../plugin.css';
 import { Link } from 'react-router-dom';
 import { PageSection, Title, Spinner, Bullseye, Label } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
@@ -124,9 +125,9 @@ const PolicyListPage: React.FC = () => {
   if (!loaded) {
     return (
       <>
-        <PageSection variant="default">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('Policies')}</Title>
-        </PageSection>
+        </div>
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
@@ -136,10 +137,10 @@ const PolicyListPage: React.FC = () => {
 
   return (
     <>
-      <PageSection variant="default">
+      <div className="rhcl-page-content">
         <Title headingLevel="h1">{t('Policies')}</Title>
-      </PageSection>
-      <PageSection>
+      </div>
+      <div className="rhcl-page-content">
         <FilterToolbar
           searchValue={searchValue}
           onSearchChange={setSearchValue}
@@ -206,7 +207,7 @@ const PolicyListPage: React.FC = () => {
             })}
           </Tbody>
         </Table>
-      </PageSection>
+      </div>
     </>
   );
 };

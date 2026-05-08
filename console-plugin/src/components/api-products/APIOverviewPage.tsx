@@ -1,4 +1,5 @@
 import * as React from 'react';
+import '../../plugin.css';
 import { useParams } from 'react-router-dom-v5-compat';
 import { Link } from 'react-router-dom';
 import {
@@ -42,11 +43,9 @@ const APIOverviewPage: React.FC = () => {
 
   if (!loaded || !product) {
     return (
-      <>
-        <PageSection isFilled>
-          <Bullseye><Spinner size="xl" /></Bullseye>
-        </PageSection>
-      </>
+      <PageSection isFilled>
+        <Bullseye><Spinner size="xl" /></Bullseye>
+      </PageSection>
     );
   }
 
@@ -130,7 +129,7 @@ const APIOverviewContent: React.FC<{
 
   return (
     <>
-      <PageSection variant="default">
+      <div className="rhcl-page-content">
         <Breadcrumb>
           <BreadcrumbItem>
             <Link to="/connectivity-link/api-products">{t('Back to API Products')}</Link>
@@ -164,9 +163,9 @@ const APIOverviewContent: React.FC<{
             ))}
           </Flex>
         )}
-      </PageSection>
+      </div>
 
-      <PageSection>
+      <div className="rhcl-page-content">
         <Grid hasGutter>
           <GridItem span={6}>
             <Card>
@@ -325,7 +324,7 @@ const APIOverviewContent: React.FC<{
             </Card>
           </GridItem>
         </Grid>
-      </PageSection>
+      </div>
     </>
   );
 };

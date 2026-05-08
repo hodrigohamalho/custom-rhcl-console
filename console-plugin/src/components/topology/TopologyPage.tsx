@@ -1,4 +1,5 @@
 import * as React from 'react';
+import '../../plugin.css';
 import {
   PageSection,
   Title,
@@ -149,9 +150,9 @@ const TopologyPage: React.FC = () => {
   if (!loaded) {
     return (
       <>
-        <PageSection variant="default">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('Topology')}</Title>
-        </PageSection>
+        </div>
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
@@ -162,10 +163,10 @@ const TopologyPage: React.FC = () => {
   if (!model || !model.nodes || model.nodes.length === 0) {
     return (
       <>
-        <PageSection variant="default">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('Topology')}</Title>
-        </PageSection>
-        <PageSection>
+        </div>
+        <div className="rhcl-page-content">
           <EmptyState variant="lg">
             <Title headingLevel="h2" size="lg">
               {t('No resources found')}
@@ -174,16 +175,16 @@ const TopologyPage: React.FC = () => {
               {t('No Gateways or HTTPRoutes found to display in the topology graph.')}
             </EmptyStateBody>
           </EmptyState>
-        </PageSection>
+        </div>
       </>
     );
   }
 
   return (
     <>
-      <PageSection variant="default">
+      <div className="rhcl-page-content">
         <Title headingLevel="h1">{t('Topology')}</Title>
-      </PageSection>
+      </div>
       <PageSection isFilled padding={{ default: 'noPadding' }}>
         <TopologyGraph model={model} />
       </PageSection>

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import '../../plugin.css';
 import { useParams } from 'react-router-dom-v5-compat';
 import { Link } from 'react-router-dom';
 import {
@@ -51,11 +52,9 @@ const GatewayDetailPage: React.FC = () => {
 
   if (!loaded || !gateway || !gateway.spec) {
     return (
-      <>
-        <PageSection isFilled className="co-m-pane__body">
-          <Bullseye><Spinner size="xl" /></Bullseye>
-        </PageSection>
-      </>
+      <PageSection isFilled>
+        <Bullseye><Spinner size="xl" /></Bullseye>
+      </PageSection>
     );
   }
 
@@ -64,7 +63,7 @@ const GatewayDetailPage: React.FC = () => {
 
   return (
     <>
-      <PageSection className="co-m-pane__body">
+      <div className="rhcl-page-content">
         <Breadcrumb>
           <BreadcrumbItem>
             <Link to="/connectivity-link/gateways">{t('Gateways')}</Link>
@@ -76,8 +75,8 @@ const GatewayDetailPage: React.FC = () => {
         <Title headingLevel="h1" style={{ marginTop: 8 }}>
           {name} <StatusLabel conditions={gateway.status?.conditions} />
         </Title>
-      </PageSection>
-      <PageSection className="co-m-pane__body">
+      </div>
+      <div className="rhcl-page-content">
         <Tabs
           activeKey={activeTab}
           onSelect={(_e, idx) => setActiveTab(idx as number)}
@@ -197,7 +196,7 @@ const GatewayDetailPage: React.FC = () => {
             </div>
           </Tab>
         </Tabs>
-      </PageSection>
+      </div>
     </>
   );
 };

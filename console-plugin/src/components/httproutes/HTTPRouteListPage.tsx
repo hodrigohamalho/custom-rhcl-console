@@ -1,4 +1,5 @@
 import * as React from 'react';
+import '../../plugin.css';
 import { Link } from 'react-router-dom';
 import { PageSection, Title, Spinner, Bullseye } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
@@ -64,10 +65,10 @@ const HTTPRouteListPage: React.FC = () => {
   if (!loaded) {
     return (
       <>
-        <PageSection className="co-m-pane__body">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
-        </PageSection>
-        <PageSection isFilled className="co-m-pane__body">
+        </div>
+        <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
       </>
@@ -77,27 +78,27 @@ const HTTPRouteListPage: React.FC = () => {
   if (!hasAccess) {
     return (
       <>
-        <PageSection className="co-m-pane__body">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
-        </PageSection>
-        <PageSection className="co-m-pane__body">
+        </div>
+        <div className="rhcl-page-content">
           <EmptyRBACState
             resource={t('HTTPRoutes')}
             verb="list"
             group="gateway.networking.k8s.io"
             kind="HTTPRoute"
           />
-        </PageSection>
+        </div>
       </>
     );
   }
 
   return (
     <>
-      <PageSection className="co-m-pane__body">
+      <div className="rhcl-page-content">
         <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
-      </PageSection>
-      <PageSection className="co-m-pane__body">
+      </div>
+      <div className="rhcl-page-content">
         <FilterToolbar
           searchValue={searchValue}
           onSearchChange={setSearchValue}
@@ -155,7 +156,7 @@ const HTTPRouteListPage: React.FC = () => {
             })}
           </Tbody>
         </Table>
-      </PageSection>
+      </div>
     </>
   );
 };

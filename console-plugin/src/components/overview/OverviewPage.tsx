@@ -43,10 +43,10 @@ const OverviewPage: React.FC = () => {
   if (!gwLoaded || !routeLoaded) {
     return (
       <>
-        <PageSection className="co-m-pane__body">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('Connectivity Link Overview')}</Title>
-        </PageSection>
-        <PageSection isFilled className="co-m-pane__body">
+        </div>
+        <PageSection isFilled>
           <Spinner size="xl" />
         </PageSection>
       </>
@@ -56,17 +56,17 @@ const OverviewPage: React.FC = () => {
   if (!gwAccess) {
     return (
       <>
-        <PageSection className="co-m-pane__body">
+        <div className="rhcl-page-content">
           <Title headingLevel="h1">{t('Connectivity Link Overview')}</Title>
-        </PageSection>
-        <PageSection className="co-m-pane__body">
+        </div>
+        <div className="rhcl-page-content">
           <EmptyRBACState
             resource={t('Gateways')}
             verb="list"
             group="gateway.networking.k8s.io"
             kind="Gateway"
           />
-        </PageSection>
+        </div>
       </>
     );
   }
@@ -83,7 +83,7 @@ const OverviewPage: React.FC = () => {
 
   return (
     <>
-      <PageSection className="co-m-pane__body">
+      <div className="rhcl-page-content">
         <Flex>
           <FlexItem grow={{ default: 'grow' }}>
             <Title headingLevel="h1">{t('Connectivity Link Overview')}</Title>
@@ -92,8 +92,8 @@ const OverviewPage: React.FC = () => {
             <HostnameSearch />
           </FlexItem>
         </Flex>
-      </PageSection>
-      <PageSection className="co-m-pane__body">
+      </div>
+      <div className="rhcl-page-content">
         <Grid hasGutter>
           <GridItem span={4}>
             <Card>
@@ -152,7 +152,7 @@ const OverviewPage: React.FC = () => {
             </Card>
           </GridItem>
         </Grid>
-      </PageSection>
+      </div>
     </>
   );
 };
