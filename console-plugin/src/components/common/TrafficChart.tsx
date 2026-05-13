@@ -22,6 +22,8 @@ interface TrafficChartProps {
   name: string;
   namespace: string;
   gatewayClass?: string;
+  backendServices?: string[];
+  metricsNamespaces?: string[];
 }
 
 const REQUEST_COLORS = ['#3E8635', '#F0AB00', '#C9190B'];
@@ -142,29 +144,32 @@ const LatencyChart: React.FC<{ series: TimeSeries[] }> = ({ series }) => {
   );
 };
 
-export const TrafficCharts: React.FC<TrafficChartProps> = ({ kind, name, namespace, gatewayClass }) => {
+export const TrafficCharts: React.FC<TrafficChartProps> = ({ kind, name, namespace, gatewayClass, backendServices, metricsNamespaces }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
+  const opts = { namespace, name, kind, gatewayClass, backendServices };
 
   const rateQueries = React.useMemo(
     () => [
-      { label: '2xx', query: statusCodeRateRangeQuery(namespace, name, kind, '2xx', '5m', gatewayClass) },
-      { label: '4xx', query: statusCodeRateRangeQuery(namespace, name, kind, '4xx', '5m', gatewayClass) },
-      { label: '5xx', query: statusCodeRateRangeQuery(namespace, name, kind, '5xx', '5m', gatewayClass) },
+      { label: '2xx', query: statusCodeRateRangeQuery(opts, '2xx') },
+      { label: '4xx', query: statusCodeRateRangeQuery(opts, '4xx') },
+      { label: '5xx', query: statusCodeRateRangeQuery(opts, '5xx') },
     ],
-    [namespace, name, kind, gatewayClass],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [namespace, name, kind, gatewayClass, backendServices?.join(',')],
   );
 
   const latencyQueries = React.useMemo(
     () => [
-      { label: 'p50', query: latencyPercentileRangeQuery(namespace, name, kind, 0.5, '5m', gatewayClass) },
-      { label: 'p95', query: latencyPercentileRangeQuery(namespace, name, kind, 0.95, '5m', gatewayClass) },
-      { label: 'p99', query: latencyPercentileRangeQuery(namespace, name, kind, 0.99, '5m', gatewayClass) },
+      { label: 'p50', query: latencyPercentileRangeQuery(opts, 0.5) },
+      { label: 'p95', query: latencyPercentileRangeQuery(opts, 0.95) },
+      { label: 'p99', query: latencyPercentileRangeQuery(opts, 0.99) },
     ],
-    [namespace, name, kind, gatewayClass],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [namespace, name, kind, gatewayClass, backendServices?.join(',')],
   );
 
-  const { series: rateSeries, loaded: rateLoaded } = usePrometheusRange(rateQueries, namespace, 3600, 60);
-  const { series: latencySeries, loaded: latencyLoaded } = usePrometheusRange(latencyQueries, namespace, 3600, 60);
+  const { series: rateSeries, loaded: rateLoaded } = usePrometheusRange(rateQueries, namespace, 3600, 60, 30000, metricsNamespaces);
+  const { series: latencySeries, loaded: latencyLoaded } = usePrometheusRange(latencyQueries, namespace, 3600, 60, 30000, metricsNamespaces);
 
   if (!rateLoaded || !latencyLoaded) {
     return (
@@ -187,13 +192,15 @@ export const TrafficCharts: React.FC<TrafficChartProps> = ({ kind, name, namespa
   );
 };
 
-export const TrafficSparkline: React.FC<TrafficChartProps> = ({ kind, name, namespace, gatewayClass }) => {
+export const TrafficSparkline: React.FC<TrafficChartProps> = ({ kind, name, namespace, gatewayClass, backendServices, metricsNamespaces }) => {
+  const opts = { namespace, name, kind, gatewayClass, backendServices };
   const queries = React.useMemo(
-    () => [{ label: 'req/s', query: trafficOverTimeQuery(namespace, name, kind, '5m', gatewayClass) }],
-    [namespace, name, kind, gatewayClass],
+    () => [{ label: 'req/s', query: trafficOverTimeQuery(opts) }],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [namespace, name, kind, gatewayClass, backendServices?.join(',')],
   );
 
-  const { series, loaded } = usePrometheusRange(queries, namespace, 3600, 120);
+  const { series, loaded } = usePrometheusRange(queries, namespace, 3600, 120, 30000, metricsNamespaces);
 
   if (!loaded || !series[0]?.data.length) {
     return null;

@@ -39,24 +39,36 @@ const EMPTY_TRAFFIC: TrafficData = {
 };
 
 /**
- * Try the tenancy endpoint first (works for all users), then fall back to
- * the cluster-wide endpoint (works for cluster-admins when tenancy is unavailable).
+ * Build a list of Prometheus endpoints to try, in priority order:
+ *   1. Tenancy endpoint for each candidate namespace (handles non-admin users)
+ *   2. Cluster-wide endpoint (handles cluster-admins)
  */
+function buildEndpoints(path: string, queryString: string, namespaces: string[]): string[] {
+  const unique = [...new Set(namespaces.filter(Boolean))];
+  const urls: string[] = [];
+  for (const ns of unique) {
+    urls.push(`/api/prometheus-tenancy${path}?namespace=${encodeURIComponent(ns)}&${queryString}`);
+  }
+  urls.push(`/api/prometheus${path}?${queryString}`);
+  return urls;
+}
+
 async function fetchPrometheusQuery(
   query: string,
-  namespace: string,
+  namespaces: string[],
 ): Promise<{ value: number | null; endpointDown: boolean }> {
-  const endpoints = [
-    `/api/prometheus-tenancy/api/v1/query?namespace=${encodeURIComponent(namespace)}&query=${encodeURIComponent(query)}`,
-    `/api/prometheus/api/v1/query?query=${encodeURIComponent(query)}`,
-  ];
+  const endpoints = buildEndpoints('/api/v1/query', `query=${encodeURIComponent(query)}`, namespaces);
 
+  let anyReachable = false;
   for (const url of endpoints) {
     try {
       const response = await consoleFetch(url);
+      anyReachable = true;
       const json = await response.json();
       const val = json?.data?.result?.[0]?.value?.[1];
-      return { value: val ? parseFloat(val) : null, endpointDown: false };
+      if (val) {
+        return { value: parseFloat(val), endpointDown: false };
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const isEndpointError = /40[13]|403|404|503/.test(msg);
@@ -67,7 +79,7 @@ async function fetchPrometheusQuery(
     }
   }
 
-  return { value: null, endpointDown: true };
+  return { value: null, endpointDown: !anyReachable };
 }
 
 export function usePrometheusTraffic(
@@ -76,6 +88,8 @@ export function usePrometheusTraffic(
   namespace: string,
   pollInterval = 30000,
   gatewayClass?: string,
+  backendServices?: string[],
+  metricsNamespaces?: string[],
 ): UsePrometheusTrafficResult {
   const [data, setData] = useState<TrafficData>(EMPTY_TRAFFIC);
   const [loaded, setLoaded] = useState(false);
@@ -86,22 +100,24 @@ export function usePrometheusTraffic(
   const fetchMetrics = useCallback(async () => {
     if (!name || !namespace) return;
 
+    const nsToTry = metricsNamespaces?.length ? metricsNamespaces : [namespace];
+    const opts = { namespace, name, kind, gatewayClass, backendServices };
     const queries = {
-      requestRate1m: requestRateQuery(namespace, name, kind, '1m', gatewayClass),
-      requestRate5m: requestRateQuery(namespace, name, kind, '5m', gatewayClass),
-      successRate: successRateQuery(namespace, name, kind, '5m', gatewayClass),
-      rate2xx: statusCodeRateQuery(namespace, name, kind, '2xx', '5m', gatewayClass),
-      rate4xx: statusCodeRateQuery(namespace, name, kind, '4xx', '5m', gatewayClass),
-      rate5xx: statusCodeRateQuery(namespace, name, kind, '5xx', '5m', gatewayClass),
-      latencyP50: latencyPercentileQuery(namespace, name, kind, 0.5, '5m', gatewayClass),
-      latencyP95: latencyPercentileQuery(namespace, name, kind, 0.95, '5m', gatewayClass),
-      latencyP99: latencyPercentileQuery(namespace, name, kind, 0.99, '5m', gatewayClass),
+      requestRate1m: requestRateQuery(opts, '1m'),
+      requestRate5m: requestRateQuery(opts, '5m'),
+      successRate: successRateQuery(opts),
+      rate2xx: statusCodeRateQuery(opts, '2xx'),
+      rate4xx: statusCodeRateQuery(opts, '4xx'),
+      rate5xx: statusCodeRateQuery(opts, '5xx'),
+      latencyP50: latencyPercentileQuery(opts, 0.5),
+      latencyP95: latencyPercentileQuery(opts, 0.95),
+      latencyP99: latencyPercentileQuery(opts, 0.99),
     };
 
     try {
       const results = await Promise.all(
         Object.entries(queries).map(async ([key, query]) => {
-          const { value, endpointDown } = await fetchPrometheusQuery(query, namespace);
+          const { value, endpointDown } = await fetchPrometheusQuery(query, nsToTry);
           return [key, value, endpointDown] as const;
         }),
       );
@@ -131,7 +147,8 @@ export function usePrometheusTraffic(
       setLoaded(true);
       setMetricsAvailable(false);
     }
-  }, [kind, name, namespace, gatewayClass]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kind, name, namespace, gatewayClass, backendServices?.join(','), metricsNamespaces?.join(',')]);
 
   useEffect(() => {
     fetchMetrics();

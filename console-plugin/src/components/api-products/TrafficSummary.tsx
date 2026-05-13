@@ -17,15 +17,20 @@ import { TrafficSparkline } from '../common/TrafficChart';
 interface TrafficSummaryProps {
   routeName: string;
   namespace: string;
+  backendServices?: string[];
+  metricsNamespaces?: string[];
 }
 
-const TrafficSummary: React.FC<TrafficSummaryProps> = ({ routeName, namespace }) => {
+const TrafficSummary: React.FC<TrafficSummaryProps> = ({ routeName, namespace, backendServices, metricsNamespaces }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const { data, loaded, metricsAvailable } = usePrometheusTraffic(
     'HTTPRoute',
     routeName,
     namespace,
     30000,
+    undefined,
+    backendServices,
+    metricsNamespaces,
   );
 
   if (!loaded) {
@@ -74,7 +79,7 @@ const TrafficSummary: React.FC<TrafficSummaryProps> = ({ routeName, namespace })
             <div style={{ fontSize: '0.85em', color: 'var(--pf-t--global--color--nonstatus--gray--default)' }}>{t('success')}</div>
           </FlexItem>
         </Flex>
-        <TrafficSparkline kind="HTTPRoute" name={routeName} namespace={namespace} />
+        <TrafficSparkline kind="HTTPRoute" name={routeName} namespace={namespace} backendServices={backendServices} metricsNamespaces={metricsNamespaces} />
       </CardBody>
     </Card>
   );

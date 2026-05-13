@@ -126,6 +126,15 @@ const APIOverviewContent: React.FC<{
   }, [singleRoute]);
 
   const routeName = targetRef?.name || '';
+  const backendServices = React.useMemo(
+    () => [...new Set((singleRoute?.spec?.rules || []).flatMap((r) => (r.backendRefs || []).map((b) => b.name)))],
+    [singleRoute],
+  );
+  const gwNs = singleRoute?.spec?.parentRefs?.[0]?.namespace;
+  const metricsNamespaces = React.useMemo(
+    () => [...new Set([ns, gwNs].filter(Boolean) as string[])],
+    [ns, gwNs],
+  );
 
   return (
     <>
@@ -182,7 +191,7 @@ const APIOverviewContent: React.FC<{
             </Card>
           </GridItem>
           <GridItem span={6}>
-            <TrafficSummary routeName={routeName} namespace={ns} />
+            <TrafficSummary routeName={routeName} namespace={ns} backendServices={backendServices} metricsNamespaces={metricsNamespaces} />
           </GridItem>
 
           <GridItem span={6}>

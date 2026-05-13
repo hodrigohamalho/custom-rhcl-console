@@ -18,34 +18,45 @@ interface RangeQuerySpec {
 }
 
 /**
- * Try the tenancy endpoint first (works for all users), then fall back to
- * the cluster-wide endpoint (works for cluster-admins when tenancy is unavailable).
+ * Build a list of Prometheus endpoints to try, in priority order:
+ *   1. Tenancy endpoint for each candidate namespace (handles non-admin users)
+ *   2. Cluster-wide endpoint (handles cluster-admins)
  */
+function buildRangeEndpoints(qs: URLSearchParams, namespaces: string[]): string[] {
+  const unique = [...new Set(namespaces.filter(Boolean))];
+  const urls: string[] = [];
+  for (const ns of unique) {
+    urls.push(`/api/prometheus-tenancy/api/v1/query_range?namespace=${encodeURIComponent(ns)}&${qs}`);
+  }
+  urls.push(`/api/prometheus/api/v1/query_range?${qs}`);
+  return urls;
+}
+
 async function fetchRangeQuery(
   query: string,
-  namespace: string,
+  namespaces: string[],
   start: number,
   end: number,
   step: number,
 ): Promise<{ values: [number, string][]; endpointDown: boolean }> {
-  const baseParams = {
+  const qs = new URLSearchParams({
     query,
     start: String(start),
     end: String(end),
     step: String(step),
-  };
+  });
+  const endpoints = buildRangeEndpoints(qs, namespaces);
 
-  const endpoints = [
-    `/api/prometheus-tenancy/api/v1/query_range?namespace=${encodeURIComponent(namespace)}&${new URLSearchParams(baseParams)}`,
-    `/api/prometheus/api/v1/query_range?${new URLSearchParams(baseParams)}`,
-  ];
-
+  let anyReachable = false;
   for (const url of endpoints) {
     try {
       const response = await consoleFetch(url);
+      anyReachable = true;
       const json = await response.json();
       const values: [number, string][] = json?.data?.result?.[0]?.values || [];
-      return { values, endpointDown: false };
+      if (values.length > 0) {
+        return { values, endpointDown: false };
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       const isEndpointError = /40[13]|403|404|503/.test(msg);
@@ -56,7 +67,7 @@ async function fetchRangeQuery(
     }
   }
 
-  return { values: [], endpointDown: true };
+  return { values: [], endpointDown: !anyReachable };
 }
 
 export function usePrometheusRange(
@@ -65,6 +76,7 @@ export function usePrometheusRange(
   durationSeconds = 3600,
   stepSeconds = 60,
   pollInterval = 30000,
+  metricsNamespaces?: string[],
 ): UsePrometheusRangeResult {
   const [series, setSeries] = useState<TimeSeries[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -76,6 +88,7 @@ export function usePrometheusRange(
   const fetchRange = useCallback(async () => {
     if (queries.length === 0) return;
 
+    const nsToTry = metricsNamespaces?.length ? metricsNamespaces : [namespace];
     const now = Math.floor(Date.now() / 1000);
     const start = now - durationSeconds;
 
@@ -86,7 +99,7 @@ export function usePrometheusRange(
         queries.map(async (spec) => {
           const { values, endpointDown } = await fetchRangeQuery(
             spec.query,
-            namespace,
+            nsToTry,
             start,
             now,
             stepSeconds,
@@ -112,7 +125,7 @@ export function usePrometheusRange(
       setLoaded(true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queriesKey, namespace, durationSeconds, stepSeconds]);
+  }, [queriesKey, namespace, durationSeconds, stepSeconds, metricsNamespaces?.join(',')]);
 
   useEffect(() => {
     fetchRange();

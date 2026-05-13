@@ -26,13 +26,15 @@ interface TrafficPanelProps {
   namespace: string;
   pollInterval?: number;
   gatewayClass?: string;
+  backendServices?: string[];
+  metricsNamespaces?: string[];
 }
 
 function hasAnyData(data: TrafficData): boolean {
   return Object.values(data).some((v) => v !== null);
 }
 
-const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, pollInterval, gatewayClass }) => {
+const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, pollInterval, gatewayClass, backendServices, metricsNamespaces }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const { data, loaded, metricsAvailable } = usePrometheusTraffic(
     kind,
@@ -40,6 +42,8 @@ const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, poll
     namespace,
     pollInterval,
     gatewayClass,
+    backendServices,
+    metricsNamespaces,
   );
 
   if (!loaded) {
@@ -98,7 +102,7 @@ const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, poll
           </Card>
         </StackItem>
         <StackItem>
-          <TrafficCharts kind={kind} name={name} namespace={namespace} gatewayClass={gatewayClass} />
+          <TrafficCharts kind={kind} name={name} namespace={namespace} gatewayClass={gatewayClass} backendServices={backendServices} metricsNamespaces={metricsNamespaces} />
         </StackItem>
       </Stack>
     );
@@ -149,7 +153,7 @@ const TrafficPanel: React.FC<TrafficPanelProps> = ({ kind, name, namespace, poll
         </Card>
       </StackItem>
       <StackItem>
-        <TrafficCharts kind={kind} name={name} namespace={namespace} gatewayClass={gatewayClass} />
+        <TrafficCharts kind={kind} name={name} namespace={namespace} gatewayClass={gatewayClass} backendServices={backendServices} metricsNamespaces={metricsNamespaces} />
       </StackItem>
     </Stack>
   );

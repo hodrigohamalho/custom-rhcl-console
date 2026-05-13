@@ -48,6 +48,12 @@ const HTTPRouteDetailPage: React.FC = () => {
     namespace: ns,
   });
 
+  const backendServices = React.useMemo(
+    () => [...new Set((route?.spec?.rules || []).flatMap((r) => (r.backendRefs || []).map((b) => b.name)))],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [JSON.stringify(route?.spec?.rules)],
+  );
+
   if (!loaded || !route || !route.spec) {
     return (
       <PageSection isFilled>
@@ -194,7 +200,7 @@ const HTTPRouteDetailPage: React.FC = () => {
 
           <Tab eventKey={3} title={<TabTitleText>{t('Metrics')}</TabTitleText>}>
             <div style={{ marginTop: 16 }}>
-              <TrafficPanel kind="HTTPRoute" name={name || ''} namespace={ns || ''} />
+              <TrafficPanel kind="HTTPRoute" name={name || ''} namespace={ns || ''} backendServices={backendServices} metricsNamespaces={[ns || '', parentRef?.namespace || ns || '']} />
             </div>
           </Tab>
 

@@ -10,7 +10,7 @@
  *   - namespace                       — pod namespace (used for Gateway filtering)
  *   - destination_service_namespace   — target service namespace (used for HTTPRoute filtering)
  *   - source_workload                 — Gateway workload name: "<gateway_name>-<gateway_class>"
- *   - destination_service_name        — target Service name (used for HTTPRoute filtering)
+ *   - destination_service_name        — K8s Service name (from HTTPRoute backendRefs)
  *   - response_code                   — HTTP status code (e.g. "200", "404")
  *
  * To verify which metrics exist, run in the Thanos/Prometheus UI:
@@ -18,93 +18,84 @@
  *   istio_requests_total{destination_service_namespace="<route-ns>"}
  */
 
+interface QueryOpts {
+  namespace: string;
+  name: string;
+  kind: 'Gateway' | 'HTTPRoute';
+  gatewayClass?: string;
+  backendServices?: string[];
+}
+
 export function requestRateQuery(
-  namespace: string,
-  name: string,
-  kind: 'Gateway' | 'HTTPRoute',
+  opts: QueryOpts,
   window: '1m' | '5m' = '5m',
-  gatewayClass?: string,
 ): string {
-  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  const filter = kindFilter(opts);
   return `sum(rate(istio_requests_total{${filter}}[${window}]))`;
 }
 
 export function statusCodeRateQuery(
-  namespace: string,
-  name: string,
-  kind: 'Gateway' | 'HTTPRoute',
+  opts: QueryOpts,
   codeClass: '2xx' | '4xx' | '5xx',
   window = '5m',
-  gatewayClass?: string,
 ): string {
   const codePattern = codeClass === '2xx' ? '2..' : codeClass === '4xx' ? '4..' : '5..';
-  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  const filter = kindFilter(opts);
   return `sum(rate(istio_requests_total{${filter}, response_code=~"${codePattern}"}[${window}]))`;
 }
 
 export function latencyPercentileQuery(
-  namespace: string,
-  name: string,
-  kind: 'Gateway' | 'HTTPRoute',
+  opts: QueryOpts,
   percentile: 0.5 | 0.95 | 0.99,
   window = '5m',
-  gatewayClass?: string,
 ): string {
-  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  const filter = kindFilter(opts);
   return `histogram_quantile(${percentile}, sum(rate(istio_request_duration_milliseconds_bucket{${filter}}[${window}])) by (le))`;
 }
 
 export function successRateQuery(
-  namespace: string,
-  name: string,
-  kind: 'Gateway' | 'HTTPRoute',
+  opts: QueryOpts,
   window = '5m',
-  gatewayClass?: string,
 ): string {
-  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  const filter = kindFilter(opts);
   return `sum(rate(istio_requests_total{${filter}, response_code=~"[23].."}[${window}])) / sum(rate(istio_requests_total{${filter}}[${window}])) * 100`;
 }
 
 export function trafficOverTimeQuery(
-  namespace: string,
-  name: string,
-  kind: 'Gateway' | 'HTTPRoute',
+  opts: QueryOpts,
   window = '5m',
-  gatewayClass?: string,
 ): string {
-  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  const filter = kindFilter(opts);
   return `sum(rate(istio_requests_total{${filter}}[${window}]))`;
 }
 
 export function statusCodeRateRangeQuery(
-  namespace: string,
-  name: string,
-  kind: 'Gateway' | 'HTTPRoute',
+  opts: QueryOpts,
   codeClass: '2xx' | '4xx' | '5xx',
   window = '5m',
-  gatewayClass?: string,
 ): string {
   const codePattern = codeClass === '2xx' ? '2..' : codeClass === '4xx' ? '4..' : '5..';
-  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  const filter = kindFilter(opts);
   return `sum(rate(istio_requests_total{${filter}, response_code=~"${codePattern}"}[${window}]))`;
 }
 
 export function latencyPercentileRangeQuery(
-  namespace: string,
-  name: string,
-  kind: 'Gateway' | 'HTTPRoute',
+  opts: QueryOpts,
   percentile: 0.5 | 0.95 | 0.99,
   window = '5m',
-  gatewayClass?: string,
 ): string {
-  const filter = kindFilter(namespace, name, kind, gatewayClass);
+  const filter = kindFilter(opts);
   return `histogram_quantile(${percentile}, sum(rate(istio_request_duration_milliseconds_bucket{${filter}}[${window}])) by (le))`;
 }
 
-function kindFilter(namespace: string, name: string, kind: 'Gateway' | 'HTTPRoute', gatewayClass?: string): string {
+function kindFilter({ namespace, name, kind, gatewayClass, backendServices }: QueryOpts): string {
   if (kind === 'Gateway') {
     const workload = gatewayClass ? `${name}-${gatewayClass}` : name;
     return `reporter="source", namespace="${namespace}", source_workload="${workload}"`;
   }
-  return `destination_service_namespace="${namespace}", destination_service_name="${name}"`;
+  const services = backendServices?.length ? backendServices : [name];
+  const svcMatcher = services.length === 1
+    ? `destination_service_name="${services[0]}"`
+    : `destination_service_name=~"${services.join('|')}"`;
+  return `destination_service_namespace="${namespace}", ${svcMatcher}`;
 }
