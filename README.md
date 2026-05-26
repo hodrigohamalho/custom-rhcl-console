@@ -123,7 +123,7 @@ The two-stage Dockerfile uses `ubi9/nodejs-22` for the build and
 
 ```bash
 export RHCL_CONSOLE_NS=custom-rhcl-console
-export RHCL_CONSOLE_IMAGE=quay.io/<org>/custom-rhcl-console:latest
+export RHCL_CONSOLE_IMAGE=quay.io/jsimas/custom-rhcl-console:latest
 
 oc new-project "$RHCL_CONSOLE_NS" || true
 
