@@ -104,6 +104,17 @@ export const POLICY_KIND_LABELS: Record<string, string> = {
   TLSPolicy: 'TLS',
 };
 
+/**
+ * Resolve the display label for a policy kind. Returns the curated short
+ * label when one is registered in POLICY_KIND_LABELS (the 5 specialized
+ * kinds) and falls back to the raw kind name for everything else — so
+ * policies discovered at runtime (e.g. BackendTLSPolicy) get a sane label
+ * without any further registration.
+ */
+export function policyKindLabel(kind: string): string {
+  return POLICY_KIND_LABELS[kind] || kind;
+}
+
 const POLICY_KIND_TO_GVK: Record<string, K8sGroupVersionKind> = {
   AuthPolicy: AuthPolicyGVK,
   RateLimitPolicy: RateLimitPolicyGVK,

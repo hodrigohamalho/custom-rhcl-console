@@ -201,15 +201,53 @@ export type AnyPolicy =
 /** Discriminator allowing UI components to render either the specialized cards or the generic fallback. */
 export type AnyPolicyOrGeneric = AnyPolicy | GenericPolicy;
 
-export type PolicyKind =
+/**
+ * Policy kinds for which the console ships a specialized renderer / type.
+ * Any new kind added here gets compile-time guarantees (typed spec, dedicated
+ * Card UI). Kinds NOT in this union come from GEP-713 discovery and are
+ * surfaced through the GenericPolicy fallback renderer.
+ */
+export type SpecializedPolicyKind =
   | 'AuthPolicy'
   | 'RateLimitPolicy'
   | 'TokenRateLimitPolicy'
   | 'DNSPolicy'
   | 'TLSPolicy';
 
+/** Runtime list mirroring SpecializedPolicyKind for narrowing checks. */
+export const SPECIALIZED_POLICY_KINDS: readonly SpecializedPolicyKind[] = [
+  'AuthPolicy',
+  'RateLimitPolicy',
+  'TokenRateLimitPolicy',
+  'DNSPolicy',
+  'TLSPolicy',
+] as const;
+
+/** Type guard usable when narrowing a PolicyKind to the specialized union. */
+export function isSpecializedPolicyKind(kind: string): kind is SpecializedPolicyKind {
+  return (SPECIALIZED_POLICY_KINDS as readonly string[]).includes(kind);
+}
+
+/**
+ * Discriminator for `PolicyAttachment.policyKind`. Accepts every specialized
+ * kind (preserves IDE autocomplete + type narrowing) AND any other string
+ * (so policies discovered at runtime — BackendTLSPolicy on OCP 4.22, future
+ * Kuadrant policies — flow through the same attachment shape).
+ *
+ * The `string & {}` idiom keeps the literal union widened to string at the
+ * call site without dropping the autocomplete suggestions for the specialized
+ * kinds.
+ */
+// eslint-disable-next-line @typescript-eslint/ban-types
+export type PolicyKind = SpecializedPolicyKind | (string & {});
+
 export interface PolicyAttachment {
-  policy: AnyPolicy;
+  /**
+   * The attached policy resource. For one of the specialized kinds this is a
+   * fully typed AnyPolicy; for any kind discovered at runtime it falls back
+   * to GenericPolicy (carries only the Gateway API common shape).
+   */
+  policy: AnyPolicyOrGeneric;
   policyKind: PolicyKind;
   targetRef: PolicyTargetReference;
   conditions: K8sCondition[];
