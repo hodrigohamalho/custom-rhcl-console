@@ -24,6 +24,7 @@ import {
   PolicyTargetReference,
 } from '../../types';
 import { getWorstConditionSeverity, isConditionTrue } from '../../utils/status';
+import { primaryTargetRef } from '../../utils/policyTargets';
 import StatusLabel from '../common/StatusLabel';
 import FilterToolbar from '../common/FilterToolbar';
 
@@ -67,7 +68,10 @@ const PolicyListPage: React.FC = () => {
 
     const addRows = (items: AnyPolicy[] | undefined, kind: PolicyKind) => {
       for (const p of items || []) {
-        const ref = (p.spec as { targetRef: PolicyTargetReference }).targetRef;
+        // Handles both spec.targetRefs[] (GEP-2649) and legacy spec.targetRef.
+        // Policies without any target ref are skipped (degenerate state).
+        const ref = primaryTargetRef(p);
+        if (!ref) continue;
         rows.push({ policy: p, policyKind: kind, targetRef: ref });
       }
     };

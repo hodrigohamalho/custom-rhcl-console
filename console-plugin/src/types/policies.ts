@@ -64,7 +64,12 @@ export interface AuthPolicySpec {
 
 export interface AuthPolicy extends K8sResourceCommon {
   spec: {
-    targetRef: PolicyTargetReference;
+    // GEP-2649: targetRefs[] is the current Gateway API form. The singular
+    // targetRef is retained for back-compat with policies that have not migrated.
+    // Callers SHOULD use policyTargetRefs(p) / policyAttachesTo(p, ...) from
+    // utils/policyTargets instead of reading either field directly.
+    targetRef?: PolicyTargetReference;
+    targetRefs?: PolicyTargetReference[];
     defaults?: AuthPolicySpec;
     overrides?: AuthPolicySpec;
     rules?: AuthRules;
@@ -91,7 +96,12 @@ export interface RateLimitPolicySpec {
 
 export interface RateLimitPolicy extends K8sResourceCommon {
   spec: {
-    targetRef: PolicyTargetReference;
+    // GEP-2649: targetRefs[] is the current Gateway API form. The singular
+    // targetRef is retained for back-compat with policies that have not migrated.
+    // Callers SHOULD use policyTargetRefs(p) / policyAttachesTo(p, ...) from
+    // utils/policyTargets instead of reading either field directly.
+    targetRef?: PolicyTargetReference;
+    targetRefs?: PolicyTargetReference[];
     defaults?: RateLimitPolicySpec;
     overrides?: RateLimitPolicySpec;
     limits?: Record<string, RateLimit>;
@@ -103,7 +113,12 @@ export interface RateLimitPolicy extends K8sResourceCommon {
 
 export interface TokenRateLimitPolicy extends K8sResourceCommon {
   spec: {
-    targetRef: PolicyTargetReference;
+    // GEP-2649: targetRefs[] is the current Gateway API form. The singular
+    // targetRef is retained for back-compat with policies that have not migrated.
+    // Callers SHOULD use policyTargetRefs(p) / policyAttachesTo(p, ...) from
+    // utils/policyTargets instead of reading either field directly.
+    targetRef?: PolicyTargetReference;
+    targetRefs?: PolicyTargetReference[];
     defaults?: {
       limits?: Record<string, { tokens: number; window: string }>;
     };
@@ -118,7 +133,12 @@ export interface TokenRateLimitPolicy extends K8sResourceCommon {
 
 export interface DNSPolicy extends K8sResourceCommon {
   spec: {
-    targetRef: PolicyTargetReference;
+    // GEP-2649: targetRefs[] is the current Gateway API form. The singular
+    // targetRef is retained for back-compat with policies that have not migrated.
+    // Callers SHOULD use policyTargetRefs(p) / policyAttachesTo(p, ...) from
+    // utils/policyTargets instead of reading either field directly.
+    targetRef?: PolicyTargetReference;
+    targetRefs?: PolicyTargetReference[];
     providerRefs?: { name: string }[];
     loadBalancing?: {
       geo?: { defaultGeo: string };
@@ -133,7 +153,12 @@ export interface DNSPolicy extends K8sResourceCommon {
 
 export interface TLSPolicy extends K8sResourceCommon {
   spec: {
-    targetRef: PolicyTargetReference;
+    // GEP-2649: targetRefs[] is the current Gateway API form. The singular
+    // targetRef is retained for back-compat with policies that have not migrated.
+    // Callers SHOULD use policyTargetRefs(p) / policyAttachesTo(p, ...) from
+    // utils/policyTargets instead of reading either field directly.
+    targetRef?: PolicyTargetReference;
+    targetRefs?: PolicyTargetReference[];
     issuerRef?: {
       name: string;
       kind?: string;
