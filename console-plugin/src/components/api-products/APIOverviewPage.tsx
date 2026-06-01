@@ -1,5 +1,9 @@
 import * as React from 'react';
-import { useParams, Link } from 'react-router';
+// Cluster 4.21 federates react-router 5.3 — in v5, `Link` is exported only
+// from `react-router-dom` (NOT `react-router`). `useParams` exists in both v5
+// and v7 with the same signature, so this single import works on both.
+// TODO: revisit when we move back to SDK 4.22+ / router 6+.
+import { useParams, Link } from 'react-router-dom';
 import {
   PageSection,
   Title,

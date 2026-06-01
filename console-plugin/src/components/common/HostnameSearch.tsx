@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router';
+// Cluster 4.21 federates react-router 5.3 to the plugin — `useNavigate` is
+// router v6+ and is `undefined` at runtime there (we crashed with
+// "(0, E.useNavigate) is not a function" on first render of this component).
+// Use the router 5 API (`useHistory().push`) so the plugin works on the
+// SDK-4.21-shared modules.
+// TODO: drop this once we move back to SDK 4.22+.
+import { useHistory } from 'react-router-dom';
 import { SearchInput, Popper, Menu, MenuContent, MenuList, MenuItem } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +22,7 @@ interface SearchResult {
 
 const HostnameSearch: React.FC = () => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
-  const navigate = useNavigate();
+  const history = useHistory();
   const [searchValue, setSearchValue] = React.useState('');
   const [isOpen, setIsOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLDivElement>(null);
@@ -70,7 +76,7 @@ const HostnameSearch: React.FC = () => {
 
   const onSelect = (result: SearchResult) => {
     const basePath = result.kind === 'Gateway' ? 'gateways' : 'httproutes';
-    navigate(`/connectivity-link/${basePath}/${result.namespace}/${result.name}`);
+    history.push(`/connectivity-link/${basePath}/${result.namespace}/${result.name}`);
     setSearchValue('');
     setIsOpen(false);
   };

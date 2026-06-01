@@ -1,5 +1,7 @@
 import * as React from 'react';
-import { Link } from 'react-router';
+// SDK 4.21 federates react-router 5.3; in v5 `Link` lives only in
+// `react-router-dom`. Keep this until we move back to SDK 4.22+.
+import { Link } from 'react-router-dom';
 import {
   PageSection,
   Title,
