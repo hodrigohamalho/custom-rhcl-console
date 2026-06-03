@@ -1,9 +1,9 @@
 import * as React from 'react';
-// Cluster 4.21 federates react-router 5.3 — in v5, `Link` is exported only
-// from `react-router-dom` (NOT `react-router`). `useParams` exists in both v5
-// and v7 with the same signature, so this single import works on both.
-// TODO: revisit when we move back to SDK 4.22+ / router 6+.
-import { useParams, Link } from 'react-router-dom';
+// `useParams` from v5-compat (reads the v6 context populated by the
+// host's `<CompatRouter>`); `Link` from v5 `react-router-dom`. See
+// GatewayDetailPage for the full reasoning.
+import { useParams } from 'react-router-dom-v5-compat';
+import { Link } from 'react-router-dom';
 import {
   PageSection,
   Title,
@@ -44,11 +44,17 @@ const HTTPRouteDetailPage: React.FC = () => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const [activeTab, setActiveTab] = React.useState(0);
 
-  const [route, loaded] = useK8sWatchResource<HTTPRoute>({
+  // Same SDK 4.21 quirk: single-resource watch returns undefined forever
+  // on this cluster. Listing in the namespace and finding by name works.
+  const [routes, loaded] = useK8sWatchResource<HTTPRoute[]>({
     groupVersionKind: HTTPRouteGVK,
-    name,
+    isList: true,
     namespace: ns,
   });
+  const route = React.useMemo(
+    () => (routes || []).find((r) => r.metadata?.name === name),
+    [routes, name],
+  );
 
   if (!loaded || !route) {
     return (
@@ -60,8 +66,8 @@ const HTTPRouteDetailPage: React.FC = () => {
     );
   }
 
-  const hostnames = route.spec.hostnames || [];
-  const parentRef = route.spec.parentRefs?.[0];
+  const hostnames = route.spec?.hostnames || [];
+  const parentRef = route.spec?.parentRefs?.[0];
   const parentConditions = route.status?.parents?.[0]?.conditions;
 
   return (
@@ -153,7 +159,7 @@ const HTTPRouteDetailPage: React.FC = () => {
                         </Tr>
                       </Thead>
                       <Tbody>
-                        {(route.spec.rules || []).flatMap((rule, ri) =>
+                        {(route.spec?.rules || []).flatMap((rule, ri) =>
                           (rule.backendRefs || []).map((backend, bi) => (
                             <Tr key={`${ri}-${bi}`}>
                               <Td>{ri}</Td>

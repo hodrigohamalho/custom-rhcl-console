@@ -125,9 +125,9 @@ const HTTPRouteListPage: React.FC = () => {
             {filtered.map((route) => {
               const ns = route.metadata?.namespace || '';
               const name = route.metadata?.name || '';
-              const hostnames = route.spec.hostnames || [];
-              const parentRef = route.spec.parentRefs?.[0];
-              const backendCount = (route.spec.rules || []).reduce(
+              const hostnames = route.spec?.hostnames || [];
+              const parentRef = route.spec?.parentRefs?.[0];
+              const backendCount = (route.spec?.rules || []).reduce(
                 (acc, rule) => acc + (rule.backendRefs?.length || 0),
                 0,
               );

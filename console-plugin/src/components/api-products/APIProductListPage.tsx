@@ -113,8 +113,8 @@ const APIProductListPage: React.FC = () => {
             {filtered.map((product) => {
               const ns = product.metadata?.namespace || '';
               const name = product.metadata?.name || '';
-              const displayName = product.spec.displayName || name;
-              const tags = product.spec.tags || [];
+              const displayName = product.spec?.displayName || name;
+              const tags = product.spec?.tags || [];
 
               return (
                 <Tr key={product.metadata?.uid}>
@@ -123,13 +123,13 @@ const APIProductListPage: React.FC = () => {
                       {displayName}
                     </Link>
                   </Td>
-                  <Td>{product.spec.version || '-'}</Td>
+                  <Td>{product.spec?.version || '-'}</Td>
                   <Td>
-                    <Label color={product.spec.publishStatus === 'Published' ? 'green' : 'grey'}>
-                      {t(product.spec.publishStatus || 'Draft')}
+                    <Label color={product.spec?.publishStatus === 'Published' ? 'green' : 'grey'}>
+                      {t(product.spec?.publishStatus || 'Draft')}
                     </Label>
                   </Td>
-                  <Td>{product.spec.approvalMode || 'automatic'}</Td>
+                  <Td>{product.spec?.approvalMode || 'automatic'}</Td>
                   <Td>
                     {tags.length > 0 ? (
                       <Tooltip content={tags.join(', ')}>

@@ -1,11 +1,9 @@
 import * as React from 'react';
-// Cluster 4.21 federates react-router 5.3 to the plugin — `useNavigate` is
-// router v6+ and is `undefined` at runtime there (we crashed with
-// "(0, E.useNavigate) is not a function" on first render of this component).
-// Use the router 5 API (`useHistory().push`) so the plugin works on the
-// SDK-4.21-shared modules.
-// TODO: drop this once we move back to SDK 4.22+.
-import { useHistory } from 'react-router-dom';
+// `useNavigate` from `react-router-dom-v5-compat` (federated by SDK 4.21
+// alongside v5). The bare v7 import from `react-router` crashed at
+// runtime because the host federates v5 which has no `useNavigate`.
+// v5-compat exposes the v6-style API on top of the host's v5 router.
+import { useNavigate } from 'react-router-dom-v5-compat';
 import { SearchInput, Popper, Menu, MenuContent, MenuList, MenuItem } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +20,7 @@ interface SearchResult {
 
 const HostnameSearch: React.FC = () => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
-  const history = useHistory();
+  const navigate = useNavigate();
   const [searchValue, setSearchValue] = React.useState('');
   const [isOpen, setIsOpen] = React.useState(false);
   const searchInputRef = React.useRef<HTMLDivElement>(null);
@@ -58,7 +56,7 @@ const HostnameSearch: React.FC = () => {
     }
 
     for (const route of httpRoutes || []) {
-      const hostnames = route.spec.hostnames || [];
+      const hostnames = route.spec?.hostnames || [];
       if (matchesHostnameSearch(hostnames, searchValue)) {
         for (const h of hostnames.filter((hn) => hn.toLowerCase().includes(searchValue.toLowerCase()))) {
           matches.push({
@@ -76,7 +74,7 @@ const HostnameSearch: React.FC = () => {
 
   const onSelect = (result: SearchResult) => {
     const basePath = result.kind === 'Gateway' ? 'gateways' : 'httproutes';
-    history.push(`/connectivity-link/${basePath}/${result.namespace}/${result.name}`);
+    navigate(`/connectivity-link/${basePath}/${result.namespace}/${result.name}`);
     setSearchValue('');
     setIsOpen(false);
   };

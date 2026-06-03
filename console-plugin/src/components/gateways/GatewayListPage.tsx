@@ -145,7 +145,7 @@ const GatewayRow: React.FC<{ gateway: Gateway }> = ({ gateway }) => {
         <Link to={`/connectivity-link/gateways/${ns}/${name}`}>{name}</Link>
       </Td>
       <Td>{ns}</Td>
-      <Td>{gateway.spec.gatewayClassName}</Td>
+      <Td>{gateway.spec?.gatewayClassName || '-'}</Td>
       <Td>
         <StatusLabel conditions={gateway.status?.conditions} />
         {policies.length > 0 && (
@@ -154,7 +154,7 @@ const GatewayRow: React.FC<{ gateway: Gateway }> = ({ gateway }) => {
           </span>
         )}
       </Td>
-      <Td>{gateway.spec.listeners.length}</Td>
+      <Td>{gateway.spec?.listeners?.length ?? 0}</Td>
       <Td><HostnameCell hostnames={hostnames} /></Td>
     </Tr>
   );
