@@ -43,12 +43,26 @@ interface UseBackendsStatusResult {
 export function useBackendsStatus(route: HTTPRoute | undefined): UseBackendsStatusResult {
   const routeNamespace = route?.metadata?.namespace || '';
 
-  // Flatten all backendRefs across rules. Memo so subsequent renders
-  // don't re-key the watch maps when nothing changed.
-  const refs = React.useMemo<HTTPBackendRef[]>(() => {
-    if (!route?.spec?.rules) return [];
-    return route.spec.rules.flatMap((r) => r.backendRefs || []);
+  // Flatten all backendRefs across rules. Memoising on `route` identity is
+  // not enough because useK8sWatchResource returns a NEW object on every
+  // status update (including the route's status.parents heartbeats),
+  // which would re-key the watch maps every few seconds and force the
+  // SDK to tear down + recreate every Service/EndpointSlice watch — the
+  // exact "watch spam against the K8s API" pattern we're trying to avoid.
+  //
+  // Stabilise on the *content* of backendRefs by serialising to a key
+  // string and memoising the parsed array on that key.
+  const refsKey = React.useMemo(() => {
+    const flat = (route?.spec?.rules || []).flatMap((r) => r.backendRefs || []);
+    // Only the fields we read downstream matter for stability.
+    return flat
+      .map((r) => `${r.namespace || ''}/${r.name}:${r.port ?? ''}:${r.weight ?? 1}`)
+      .join('|');
   }, [route]);
+  const refs = React.useMemo<HTTPBackendRef[]>(() => {
+    return (route?.spec?.rules || []).flatMap((r) => r.backendRefs || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refsKey]);
 
   // Build the watch map for Services. Each key is `<ns>/<name>` so duplicates
   // across rules collapse into one watch.
