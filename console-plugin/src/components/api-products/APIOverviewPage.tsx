@@ -29,6 +29,7 @@ import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { APIProductGVK, HTTPRouteGVK } from '../../models';
 import { APIProduct, HTTPRoute } from '../../types';
+import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 import { hostnameToURL } from '../../utils/hostname';
 import PlansCards from './PlansCards';
 import APIKeysTable from './APIKeysTable';
@@ -193,6 +194,29 @@ const APIOverviewContent: React.FC<{
           <FlexItem>
             <span>Version: {version}</span>
           </FlexItem>
+          {/* Deep-link into Grafana, scoped to this API Product's HTTPRoute
+              and per-consumer dashboards. Filter uses route_name regex so
+              all rules of the HTTPRoute (`.0`, `.1`, ...) match. */}
+          {targetRef?.kind === 'HTTPRoute' && targetRef?.name && (
+            <FlexItem>
+              <OpenInGrafanaButton
+                dashboard="api-overview"
+                label={t('Traffic')}
+                variant="tertiary"
+                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}.*` }}
+              />
+            </FlexItem>
+          )}
+          {targetRef?.kind === 'HTTPRoute' && targetRef?.name && (
+            <FlexItem>
+              <OpenInGrafanaButton
+                dashboard="api-consumers"
+                label={t('Consumers')}
+                variant="tertiary"
+                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}.*` }}
+              />
+            </FlexItem>
+          )}
         </Flex>
         {tags.length > 0 && (
           <Flex style={{ marginTop: 8 }} spaceItems={{ default: 'spaceItemsSm' }}>

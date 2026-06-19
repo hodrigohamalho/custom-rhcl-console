@@ -43,6 +43,7 @@ import { GatewayGVK, HTTPRouteGVK } from '../../models';
 import { Gateway, HTTPRoute, K8sCondition } from '../../types';
 import { getGatewayExternalHostnames } from '../../utils/hostname';
 import StatusLabel from '../common/StatusLabel';
+import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 import HostnameCell from '../common/HostnameCell';
 import TrafficPanel from '../common/TrafficPanel';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
@@ -94,9 +95,19 @@ const GatewayDetailPage: React.FC = () => {
             {ns}/{name}
           </BreadcrumbItem>
         </Breadcrumb>
-        <Title headingLevel="h1" style={{ marginTop: 8 }}>
-          {name} <StatusLabel conditions={gateway.status?.conditions} />
-        </Title>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <Title headingLevel="h1">
+            {name} <StatusLabel conditions={gateway.status?.conditions} />
+          </Title>
+          {/* Istio's `source_workload` label is `<gateway-name>-<class-name>`
+              (e.g. `rhcl-apps-gateway-openshift-default`). A `<name>-.*` regex
+              covers every gateway-class workload backing this Gateway CR. */}
+          <OpenInGrafanaButton
+            dashboard="api-overview"
+            label={t('Gateway traffic')}
+            vars={{ gateway: `${name}-.*` }}
+          />
+        </div>
       </PageSection>
       <PageSection>
         <Tabs

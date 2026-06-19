@@ -38,6 +38,7 @@ import {
 } from '../../types';
 import { primaryTargetRef } from '../../utils/policyTargets';
 import StatusLabel from '../common/StatusLabel';
+import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 import TopConsumers from '../api-products/TopConsumers';
 import RateLimitVisualizer from './RateLimitVisualizer';
 import RateLimitOperationalMetrics from './RateLimitOperationalMetrics';
@@ -150,10 +151,23 @@ const RateLimitPolicyDetailPage: React.FC = () => {
           </BreadcrumbItem>
           <BreadcrumbItem isActive>{ns}/{name}</BreadcrumbItem>
         </Breadcrumb>
-        <Title headingLevel="h1" style={{ marginTop: 8 }}>
-          {name} <StatusLabel conditions={policy.status?.conditions} />
-          <Label color="blue" style={{ marginLeft: 8 }}>{t('RateLimitPolicy')}</Label>
-        </Title>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <Title headingLevel="h1">
+            {name} <StatusLabel conditions={policy.status?.conditions} />
+            <Label color="blue" style={{ marginLeft: 8 }}>{t('RateLimitPolicy')}</Label>
+          </Title>
+          {/* Deep-link into the cluster's RHCL Grafana dashboard pre-filtered
+              by this policy's HTTPRoute (uses the Istio `route_name` label).
+              Hidden conceptually but visible-disabled with tooltip when
+              Grafana isn't installed — keeps the discovery path obvious. */}
+          {targetRef?.kind === 'HTTPRoute' && (
+            <OpenInGrafanaButton
+              dashboard="api-overview"
+              label={t('API metrics')}
+              vars={{ httproute: `${targetNs}.${targetRef.name}.*` }}
+            />
+          )}
+        </div>
       </PageSection>
 
       <PageSection>
