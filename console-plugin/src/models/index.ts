@@ -48,6 +48,12 @@ export const TLSPolicyGVK: K8sGroupVersionKind = {
   kind: 'TLSPolicy',
 };
 
+export const PlanPolicyGVK: K8sGroupVersionKind = {
+  group: 'extensions.kuadrant.io',
+  version: 'v1alpha1',
+  kind: 'PlanPolicy',
+};
+
 export const DNSRecordGVK: K8sGroupVersionKind = {
   group: 'kuadrant.io',
   version: 'v1alpha1',
@@ -66,6 +72,12 @@ export const ServiceGVK: K8sGroupVersionKind = {
   kind: 'Service',
 };
 
+export const EndpointSliceGVK: K8sGroupVersionKind = {
+  group: 'discovery.k8s.io',
+  version: 'v1',
+  kind: 'EndpointSlice',
+};
+
 export const APIProductGVK: K8sGroupVersionKind = {
   group: 'devportal.kuadrant.io',
   version: 'v1alpha1',
@@ -76,6 +88,22 @@ export const APIKeyGVK: K8sGroupVersionKind = {
   group: 'devportal.kuadrant.io',
   version: 'v1alpha1',
   kind: 'APIKey',
+};
+
+// devportal.kuadrant.io/v1alpha1 — auto-created by the controller; the
+// review/approval workflow points at *this*, not at APIKey directly.
+export const APIKeyRequestGVK: K8sGroupVersionKind = {
+  group: 'devportal.kuadrant.io',
+  version: 'v1alpha1',
+  kind: 'APIKeyRequest',
+};
+
+// devportal.kuadrant.io/v1alpha1 — created by the operator (or via this
+// plugin) every time an APIKeyRequest is approved or rejected.
+export const APIKeyApprovalGVK: K8sGroupVersionKind = {
+  group: 'devportal.kuadrant.io',
+  version: 'v1alpha1',
+  kind: 'APIKeyApproval',
 };
 
 /**

@@ -81,12 +81,25 @@ export interface AuthPolicy extends K8sResourceCommon {
 }
 
 export interface RateLimit {
-  rates: {
+  // Sometimes omitted (unlimited tier) — the visualizer treats absent/empty
+  // rates as "Unlimited" rather than as "broken policy".
+  rates?: {
     limit: number;
     window: string;
   }[];
   counters?: string[];
-  when?: { selector: string; operator: string; value?: string }[];
+  // Two forms exist in the wild:
+  //   - Legacy expression form: { selector, operator, value }
+  //   - CEL form (Kuadrant v1+):  { predicate: "auth.kuadrant.plan == 'gold'" }
+  // The CEL form is what the cluster actually emits today; the legacy form
+  // is kept only for back-compat with older policies.
+  when?: ({
+    selector: string;
+    operator: string;
+    value?: string;
+  } | {
+    predicate: string;
+  })[];
 }
 
 export interface RateLimitPolicySpec {
@@ -148,6 +161,35 @@ export interface DNSPolicy extends K8sResourceCommon {
   status?: {
     conditions?: K8sCondition[];
     recordConditions?: Record<string, K8sCondition[]>;
+  };
+}
+
+/**
+ * PlanPolicy (extensions.kuadrant.io/v1alpha1) — declarative plan/tier
+ * definition. The Kuadrant extension controller materialises one
+ * RateLimitPolicy (and accompanying matcher predicates) per spec.plans[]
+ * entry, so this is the authoritative source for "what plans exist on
+ * this API and what does each one promise".
+ */
+export interface PlanTier {
+  /** Tier name (gold/silver/bronze/...). Matches `secret.kuadrant.io/plan-id`. */
+  tier: string;
+  /** CEL predicate the gateway uses to decide if a request belongs to this tier. */
+  predicate?: string;
+  limits?: {
+    /** Per-plan custom rate limits. Empty/missing means "no rate limit". */
+    custom?: { limit: number; window: string }[];
+  };
+}
+
+export interface PlanPolicy extends K8sResourceCommon {
+  spec?: {
+    targetRef?: PolicyTargetReference;
+    targetRefs?: PolicyTargetReference[];
+    plans?: PlanTier[];
+  };
+  status?: {
+    conditions?: K8sCondition[];
   };
 }
 

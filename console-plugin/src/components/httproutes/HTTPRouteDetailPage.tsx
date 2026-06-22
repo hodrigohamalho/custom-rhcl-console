@@ -35,9 +35,11 @@ import { HTTPRouteGVK } from '../../models';
 import { HTTPRoute, K8sCondition } from '../../types';
 import { hostnameToURL } from '../../utils/hostname';
 import StatusLabel from '../common/StatusLabel';
+import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 import TrafficPanel from '../common/TrafficPanel';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
 import { EffectivePolicyStack } from '../policies/EffectivePolicyStack';
+import { BackendsTab } from './backends/BackendsTab';
 
 const HTTPRouteDetailPage: React.FC = () => {
   const { ns, name } = useParams<{ ns: string; name: string }>();
@@ -81,9 +83,18 @@ const HTTPRouteDetailPage: React.FC = () => {
             {ns}/{name}
           </BreadcrumbItem>
         </Breadcrumb>
-        <Title headingLevel="h1" style={{ marginTop: 8 }}>
-          {name} <StatusLabel conditions={parentConditions} />
-        </Title>
+        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <Title headingLevel="h1">
+            {name} <StatusLabel conditions={parentConditions} />
+          </Title>
+          {/* Istio reports per-rule route_name as `<ns>.<httproute>.<rule_idx>`,
+              so a `<ns>.<name>.*` regex covers every rule on this HTTPRoute. */}
+          <OpenInGrafanaButton
+            dashboard="api-overview"
+            label={t('Traffic')}
+            vars={{ httproute: `${ns}.${name}.*` }}
+          />
+        </div>
       </PageSection>
       <PageSection>
         <Tabs
@@ -191,7 +202,13 @@ const HTTPRouteDetailPage: React.FC = () => {
             </div>
           </Tab>
 
-          <Tab eventKey={2} title={<TabTitleText>{t('Effective policy stack')}</TabTitleText>}>
+          <Tab eventKey={2} title={<TabTitleText>{t('Backends')}</TabTitleText>}>
+            <div style={{ marginTop: 16 }}>
+              <BackendsTab route={route} />
+            </div>
+          </Tab>
+
+          <Tab eventKey={3} title={<TabTitleText>{t('Effective policy stack')}</TabTitleText>}>
             <div style={{ marginTop: 16 }}>
               <EffectivePolicyStack
                 routeName={name || ''}
@@ -202,13 +219,13 @@ const HTTPRouteDetailPage: React.FC = () => {
             </div>
           </Tab>
 
-          <Tab eventKey={3} title={<TabTitleText>{t('Metrics')}</TabTitleText>}>
+          <Tab eventKey={4} title={<TabTitleText>{t('Metrics')}</TabTitleText>}>
             <div style={{ marginTop: 16 }}>
               <TrafficPanel kind="HTTPRoute" name={name || ''} namespace={ns || ''} />
             </div>
           </Tab>
 
-          <Tab eventKey={4} title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+          <Tab eventKey={5} title={<TabTitleText>{t('YAML')}</TabTitleText>}>
             <div style={{ marginTop: 16 }}>
               <CodeBlock>
                 <CodeBlockCode>

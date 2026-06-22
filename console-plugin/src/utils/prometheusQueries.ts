@@ -98,6 +98,72 @@ export function successRateQuery(
   return `sum(rate(istio_requests_total{${sel}, response_code=~"[23].."}[${window}])) / sum(rate(istio_requests_total{${sel}}[${window}])) * 100`;
 }
 
+// ---------------------------------------------------------------------------
+// Per-backend metrics for the HTTPRoute Backends tab.
+//
+// Why a separate function instead of reusing requestRateQuery: this is scoped
+// to a specific (route, backend Service) pair, which the HTTPRoute-level
+// queries above can't express. The labels come from the canonical Istio
+// telemetry pipeline that the RHCL Telemetry CR already configures:
+//
+//   - `route_name`: Istio gateway controller writes this as
+//     `<route-ns>.<route-name>.<rule-idx>` when the gateway is a Gateway API
+//     listener. Regex match covers every rule of the route.
+//   - `destination_service_name` / `destination_service_namespace`: standard
+//     Istio destination labels — identify which Service the request landed on.
+//   - `reporter="source"`: dedup. Istio reports each request from both source
+//     and destination workloads; the source side has the full route context
+//     (the destination side won't have route_name).
+//
+// Backslashes in the regex are double-escaped because the JS string literal
+// eats one layer before PromQL sees it.
+// ---------------------------------------------------------------------------
+
+function backendSelector(
+  routeNamespace: string,
+  routeName: string,
+  backendNamespace: string,
+  backendName: string,
+): string {
+  return [
+    `route_name=~"${routeNamespace}\\\\.${routeName}\\\\..*"`,
+    `destination_service_name="${backendName}"`,
+    `destination_service_namespace="${backendNamespace}"`,
+    `reporter="source"`,
+  ].join(', ');
+}
+
+export function routeBackendRequestRateQuery(
+  routeNamespace: string,
+  routeName: string,
+  backendNamespace: string,
+  backendName: string,
+  window = '5m',
+): string {
+  return `sum(rate(istio_requests_total{${backendSelector(routeNamespace, routeName, backendNamespace, backendName)}}[${window}]))`;
+}
+
+export function routeBackendSuccessRateQuery(
+  routeNamespace: string,
+  routeName: string,
+  backendNamespace: string,
+  backendName: string,
+  window = '5m',
+): string {
+  const sel = backendSelector(routeNamespace, routeName, backendNamespace, backendName);
+  return `sum(rate(istio_requests_total{${sel}, response_code=~"[23].."}[${window}])) / sum(rate(istio_requests_total{${sel}}[${window}])) * 100`;
+}
+
+export function routeBackendErrorRateQuery(
+  routeNamespace: string,
+  routeName: string,
+  backendNamespace: string,
+  backendName: string,
+  window = '5m',
+): string {
+  return `sum(rate(istio_requests_total{${backendSelector(routeNamespace, routeName, backendNamespace, backendName)}, response_code=~"5.."}[${window}]))`;
+}
+
 export function trafficOverTimeQuery(
   namespace: string,
   name: string,
@@ -150,4 +216,50 @@ export function latencyPercentileRangeQuery(
   window = '5m',
 ): string {
   return `histogram_quantile(${percentile}, sum(rate(istio_request_duration_milliseconds_bucket{${targetSelector(namespace, name, kind)}}[${window}])) by (le))`;
+}
+
+// ---------------------------------------------------------------------------
+// Rate-limit metrics. Drilled into HTTP 429s rather than the broader 4xx
+// bucket — Kuadrant's Limitador surfaces a throttled request as exactly that
+// code through the gateway, so 429 is the precise consumer-facing signal of
+// "limit reached". 4xx would mix in auth failures and route misses.
+// ---------------------------------------------------------------------------
+
+/** Instant query: 429s/sec against a target over the given window. */
+export function rateLimitRejectionsQuery(
+  namespace: string,
+  name: string,
+  kind: 'Gateway' | 'HTTPRoute',
+  window = '5m',
+): string {
+  return `sum(rate(istio_requests_total{${targetSelector(namespace, name, kind)}, response_code="429"}[${window}]))`;
+}
+
+/** Instant query: total 429s in the lookback (used for the "Rejected (24h)" KPI). */
+export function rateLimitRejectionsTotalQuery(
+  namespace: string,
+  name: string,
+  kind: 'Gateway' | 'HTTPRoute',
+  window = '24h',
+): string {
+  return `sum(increase(istio_requests_total{${targetSelector(namespace, name, kind)}, response_code="429"}[${window}]))`;
+}
+
+/** Range query: per-bucket rates for allowed (2xx+3xx) vs throttled (429). */
+export function rateLimitAllowedRangeQuery(
+  namespace: string,
+  name: string,
+  kind: 'Gateway' | 'HTTPRoute',
+  window = '5m',
+): string {
+  return `sum(rate(istio_requests_total{${targetSelector(namespace, name, kind)}, response_code=~"[23].."}[${window}]))`;
+}
+
+export function rateLimitRejectionsRangeQuery(
+  namespace: string,
+  name: string,
+  kind: 'Gateway' | 'HTTPRoute',
+  window = '5m',
+): string {
+  return `sum(rate(istio_requests_total{${targetSelector(namespace, name, kind)}, response_code="429"}[${window}]))`;
 }
