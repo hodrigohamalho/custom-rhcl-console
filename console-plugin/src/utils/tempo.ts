@@ -15,10 +15,11 @@ import {
   useK8sWatchResource,
   K8sResourceCommon,
 } from '@openshift-console/dynamic-plugin-sdk';
+import { usePluginConfig } from './pluginConfig';
 
-const TEMPO_NS = 'tempo';
-const TEMPO_GATEWAY_ROUTE = 'tempo-tempo-rhcl-gateway';
-const TEMPO_STACK_NAME = 'tempo-rhcl';
+const DEFAULT_TEMPO_NS = 'tempo';
+const DEFAULT_TEMPO_GATEWAY_ROUTE = 'tempo-tempo-rhcl-gateway';
+const DEFAULT_TEMPO_STACK_NAME = 'tempo-rhcl';
 
 interface RouteResource extends K8sResourceCommon {
   spec?: { host?: string };
@@ -76,10 +77,17 @@ function tagsParam(tags: Record<string, string>): string {
  * present (TempoStack not deployed, or operator not installed).
  */
 export function useTempoLink(vars: TempoSearchVars = {}): TempoLink {
+  // Pull namespace/route/stack overrides from the ConfigMap if present,
+  // fall back to the role's defaults otherwise.
+  const { config } = usePluginConfig();
+  const namespace = config.tempoNamespace || DEFAULT_TEMPO_NS;
+  const routeName = config.tempoGatewayRouteName || DEFAULT_TEMPO_GATEWAY_ROUTE;
+  const stackName = config.tempoStackName || DEFAULT_TEMPO_STACK_NAME;
+
   const [route, routeLoaded, routeErr] = useK8sWatchResource<RouteResource>({
     groupVersionKind: { group: 'route.openshift.io', version: 'v1', kind: 'Route' },
-    namespace: TEMPO_NS,
-    name: TEMPO_GATEWAY_ROUTE,
+    namespace,
+    name: routeName,
     isList: false,
   });
   const [stack, stackLoaded] = useK8sWatchResource<TempoStackResource>({
@@ -88,8 +96,8 @@ export function useTempoLink(vars: TempoSearchVars = {}): TempoLink {
       version: 'v1alpha1',
       kind: 'TempoStack',
     },
-    namespace: TEMPO_NS,
-    name: TEMPO_STACK_NAME,
+    namespace,
+    name: stackName,
     isList: false,
   });
 
