@@ -38,6 +38,9 @@ export const TrafficMetricCard: React.FC<Props> = ({ data }) => {
             <span
               style={{
                 fontSize: 13,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: 0.4,
                 color: 'var(--pf-v5-global--Color--200)',
               }}
             >
@@ -78,8 +81,8 @@ export const TrafficMetricCard: React.FC<Props> = ({ data }) => {
             </Flex>
           </FlexItem>
           <FlexItem>
-            <div style={{ color: sparkColor }}>
-              <Sparkline data={data.sparkline} color={sparkColor} width={220} height={40} />
+            <div style={{ color: sparkColor, width: '100%' }}>
+              <Sparkline data={data.sparkline} color={sparkColor} width={260} height={40} />
             </div>
           </FlexItem>
         </Flex>

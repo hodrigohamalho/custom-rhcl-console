@@ -179,16 +179,21 @@ const OverviewPage: React.FC = () => {
         </Grid>
       </PageSection>
 
-      {/* 4. Gateways | Policies | HTTPRoutes */}
+      {/* 4. Gateways operational cards — full width so the per-gateway
+          metrics row has room for all 5 KPIs without truncating. */}
+      <PageSection>
+        <GatewayOperationalCards gateways={MOCK_GATEWAYS} />
+      </PageSection>
+
+      {/* 5. Policies + HTTPRoutes — 50/50 split. Both render tables, so
+          they need wider columns than the previous 3-column layout gave
+          them (Policy table has 5 columns, HTTPRoute table has 7). */}
       <PageSection>
         <Grid hasGutter>
-          <GridItem lg={4} md={12}>
-            <GatewayOperationalCards gateways={MOCK_GATEWAYS} />
-          </GridItem>
-          <GridItem lg={4} md={12}>
+          <GridItem lg={6} md={12}>
             <PolicyImpactTable rows={MOCK_POLICIES} />
           </GridItem>
-          <GridItem lg={4} md={12}>
+          <GridItem lg={6} md={12}>
             <RouteTrafficTable rows={MOCK_ROUTES} />
           </GridItem>
         </Grid>
