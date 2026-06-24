@@ -4,10 +4,14 @@ import { SparklinePoint } from './mockOverviewData';
 interface SparklineProps {
   data: SparklinePoint[];
   color?: string;
+  /** Width in pixels. When `responsive` is true this becomes the SVG's
+   * internal viewBox width; the rendered width is 100% of the parent. */
   width?: number;
   height?: number;
   strokeWidth?: number;
   fill?: boolean;
+  /** Render at 100% of parent width using viewBox scaling. Defaults to true. */
+  responsive?: boolean;
 }
 
 /**
@@ -26,9 +30,10 @@ export const Sparkline: React.FC<SparklineProps> = ({
   height = 36,
   strokeWidth = 1.5,
   fill = true,
+  responsive = true,
 }) => {
   if (!data || data.length < 2) {
-    return <svg width={width} height={height} aria-hidden="true" />;
+    return <svg width={responsive ? '100%' : width} height={height} aria-hidden="true" />;
   }
   const ys = data.map((p) => p.v);
   const min = Math.min(...ys);
@@ -51,9 +56,10 @@ export const Sparkline: React.FC<SparklineProps> = ({
     : '';
   return (
     <svg
-      width={width}
+      width={responsive ? '100%' : width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio={responsive ? 'none' : undefined}
       aria-hidden="true"
       style={{ display: 'block' }}
     >

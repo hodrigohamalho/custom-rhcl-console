@@ -66,8 +66,8 @@ export const RouteTrafficTable: React.FC<Props> = ({ rows }) => {
                   <Td>{r.gatewayName}</Td>
                   <Td>{r.requestsPerMin.toLocaleString('en-US')}</Td>
                   <Td>
-                    <div style={{ color: 'var(--pf-v5-global--info-color--100)' }}>
-                      <Sparkline data={r.sparkline} width={90} height={28} strokeWidth={1.25} />
+                    <div style={{ color: 'var(--pf-v5-global--info-color--100)', width: 90 }}>
+                      <Sparkline data={r.sparkline} width={90} height={28} strokeWidth={1.25} responsive={false} />
                     </div>
                   </Td>
                   <Td>

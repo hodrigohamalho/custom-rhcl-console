@@ -46,10 +46,21 @@ const Metric: React.FC<{ label: string; value: string; tone?: 'good' | 'bad' | '
     tone === 'bad' ? 'var(--pf-v5-global--danger-color--100)' :
     'var(--pf-v5-global--Color--100)';
   return (
-    <FlexItem>
-      <div style={{ fontSize: 11, color: 'var(--pf-v5-global--Color--200)' }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 600, color }}>{value}</div>
-    </FlexItem>
+    <div style={{ minWidth: 0 }}>
+      <div
+        style={{
+          fontSize: 11,
+          fontWeight: 600,
+          textTransform: 'uppercase',
+          letterSpacing: 0.4,
+          color: 'var(--pf-v5-global--Color--200)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: 18, fontWeight: 700, color, whiteSpace: 'nowrap' }}>{value}</div>
+    </div>
   );
 };
 
@@ -113,16 +124,20 @@ export const GatewayOperationalCards: React.FC<Props> = ({ gateways }) => {
                         <AngleRightIcon color="var(--pf-v5-global--Color--200)" aria-hidden="true" />
                       </FlexItem>
                     </Flex>
-                    <Flex
-                      spaceItems={{ default: 'spaceItemsLg' }}
-                      style={{ marginTop: 10 }}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
+                        gap: 16,
+                        marginTop: 12,
+                      }}
                     >
                       <Metric label={t('Requests / min')} value={gw.requestsPerMin.toLocaleString('en-US')} />
                       <Metric label={t('Success Rate')} value={`${gw.successRatePct}%`} tone={gw.successRatePct >= 95 ? 'good' : 'neutral'} />
                       <Metric label={t('Error Rate')} value={`${gw.errorRatePct}%`} tone={errorIsBad ? 'bad' : 'neutral'} />
                       <Metric label={t('Routes')} value={String(gw.routesCount)} />
                       <Metric label={t('Policies')} value={String(gw.policiesCount)} />
-                    </Flex>
+                    </div>
                   </div>
                 </a>
               </FlexItem>
