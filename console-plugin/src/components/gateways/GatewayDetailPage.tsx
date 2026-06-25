@@ -34,7 +34,9 @@ import {
   Label,
   CodeBlock,
   CodeBlockCode,
+  Button,
 } from '@patternfly/react-core';
+import { CubeIcon } from '@patternfly/react-icons';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
@@ -120,6 +122,19 @@ const GatewayDetailPage: React.FC = () => {
               label={t('Gateway traces')}
               vars={{ serviceName: 'rhcl-gateway', lookback: '1h' }}
             />
+            {/* Drops the operator into the OpenShift Console's native
+                Pods page, filtered by the Gateway API label every
+                gateway-managed pod carries. From there they get
+                Logs / Terminal / Events / YAML for free — no need to
+                re-implement any of that here. */}
+            <Button
+              variant="secondary"
+              icon={<CubeIcon />}
+              component="a"
+              href={`/search/ns/${ns}?kind=Pod&q=gateway.networking.k8s.io%2Fgateway-name%3D${encodeURIComponent(name || '')}`}
+            >
+              {t('Gateway pods')}
+            </Button>
           </div>
         </div>
       </PageSection>
