@@ -30,6 +30,7 @@ import { PolicyConfigurationCard } from './shared/PolicyConfigurationCard';
 import { PolicyMetricsCard } from './shared/PolicyMetricsCard';
 import { summarizePolicyStatus } from './shared/state';
 import { useDNSPolicyMetrics } from '../../hooks/policies/useDNSPolicyMetrics';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 const MetricStat: React.FC<{ label: string; value: string; tone?: 'good' | 'warn' | 'neutral' }> = ({
@@ -92,7 +93,6 @@ const DNSPolicyDetailPage: React.FC = () => {
     providerRefs?: Array<{ name?: string }>;
     healthCheck?: { endpoint?: string; protocol?: string };
   };
-  const yamlHref = `/k8s/ns/${ns}/kuadrant.io~v1~DNSPolicy/${name}/yaml`;
 
   return (
     <PolicyLayout
@@ -104,7 +104,14 @@ const DNSPolicyDetailPage: React.FC = () => {
           namespace={ns || ''}
           summary={summary}
           targetRef={ref}
-          yamlHref={yamlHref}
+          actions={
+            <ResourceActionsMenu
+              gvk={{ group: 'kuadrant.io', version: 'v1', kind: 'DNSPolicy' }}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/policies"
+            />
+          }
         />
       }
       mainColumn={

@@ -26,6 +26,10 @@ interface Props {
   // CR detail page so the operator can still drop down to kubectl-style work
   // when the operational view isn't enough.
   yamlHref?: string;
+  // Optional actions slot rendered in the top-right corner. When set, it
+  // replaces the built-in "Edit YAML" link so callers can drop in a richer
+  // menu (e.g. the shared ResourceActionsMenu with Edit YAML + Delete).
+  actions?: React.ReactNode;
 }
 
 const STATE_COLOR: Record<PolicyStatusSummary['state'], 'green' | 'orange' | 'blue' | 'grey'> = {
@@ -59,6 +63,7 @@ export const PolicyHeader: React.FC<Props> = ({
   summary,
   targetRef,
   yamlHref,
+  actions,
 }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const targetLine = targetRef
@@ -117,16 +122,18 @@ export const PolicyHeader: React.FC<Props> = ({
             </Flex>
           </FlexItem>
           <FlexItem>
-            {yamlHref && (
-              <Button
-                variant="link"
-                component={(props) => <Link {...props} to={yamlHref} />}
-                icon={<ExternalLinkAltIcon />}
-                iconPosition="right"
-              >
-                {t('Edit YAML')}
-              </Button>
-            )}
+            {actions
+              ? actions
+              : yamlHref && (
+                  <Button
+                    variant="link"
+                    component={(props) => <Link {...props} to={yamlHref} />}
+                    icon={<ExternalLinkAltIcon />}
+                    iconPosition="right"
+                  >
+                    {t('Edit YAML')}
+                  </Button>
+                )}
           </FlexItem>
         </Flex>
       </FlexItem>

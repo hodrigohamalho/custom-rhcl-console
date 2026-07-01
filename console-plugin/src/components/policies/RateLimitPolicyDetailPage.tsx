@@ -33,6 +33,7 @@ import { PolicyMetricsCard } from './shared/PolicyMetricsCard';
 import { summarizePolicyStatus } from './shared/state';
 import { useRateLimitMetrics } from '../../hooks/policies/useRateLimitMetrics';
 import RateLimitVisualizer from './RateLimitVisualizer';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 /**
@@ -111,7 +112,6 @@ const RateLimitPolicyDetailPage: React.FC = () => {
   const summary = summarizePolicyStatus(policy);
   const ref = primaryTargetRef(policy);
   const limits = collectLimits(policy);
-  const yamlHref = `/k8s/ns/${ns}/kuadrant.io~v1~RateLimitPolicy/${name}/yaml`;
 
   return (
     <PolicyLayout
@@ -123,7 +123,14 @@ const RateLimitPolicyDetailPage: React.FC = () => {
           namespace={ns || ''}
           summary={summary}
           targetRef={ref}
-          yamlHref={yamlHref}
+          actions={
+            <ResourceActionsMenu
+              gvk={{ group: 'kuadrant.io', version: 'v1', kind: 'RateLimitPolicy' }}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/policies"
+            />
+          }
         />
       }
       mainColumn={

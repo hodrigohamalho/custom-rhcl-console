@@ -23,7 +23,15 @@
  */
 
 .rhcl-plugin-root {
-  background: var(--pf-t--global--background--color--primary--default);
+  /* `primary--default` resolves to pure black on the Console's dark
+   * theme, which made every plugin page look like a void surrounding
+   * the cards (Gateway list, HTTPRoute detail, Policies — same
+   * complaint from customer operators). `secondary--default` is the
+   * softer surface Console uses for its own list pages (`#1b1d21`
+   * dark / near-white light), so the plugin sits in the same visual
+   * layer as the native views. Cards keep their own elevation via
+   * the rules below. */
+  background: var(--pf-t--global--background--color--secondary--default);
   min-height: 100%;
 }
 

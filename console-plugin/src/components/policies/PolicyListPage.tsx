@@ -29,6 +29,7 @@ import { getWorstConditionSeverity, isConditionTrue, getEnforcementState } from 
 import { primaryTargetRef } from '../../utils/policyTargets';
 import StatusLabel from '../common/StatusLabel';
 import FilterToolbar from '../common/FilterToolbar';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import { ratesToRpm } from './RateLimitVisualizer';
 import { RateLimit } from '../../types';
 import '../../styles/plugin-glass.css';
@@ -38,6 +39,17 @@ interface PolicyRow {
   policyKind: PolicyKind;
   targetRef: PolicyTargetReference;
 }
+
+// Local kind→GVK lookup so the per-row Actions menu can hand a concrete GVK
+// to ResourceActionsMenu. Mirrors POLICY_KIND_TO_GVK in models/index.ts but
+// that map isn't exported; the five kinds we render here match exactly.
+const POLICY_ROW_GVK: Record<PolicyKind, { group?: string; version: string; kind: string }> = {
+  AuthPolicy: AuthPolicyGVK,
+  RateLimitPolicy: RateLimitPolicyGVK,
+  TokenRateLimitPolicy: TokenRateLimitPolicyGVK,
+  DNSPolicy: DNSPolicyGVK,
+  TLSPolicy: TLSPolicyGVK,
+};
 
 const PolicyListPage: React.FC = () => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
@@ -182,6 +194,7 @@ const PolicyListPage: React.FC = () => {
               <Th>{t('Limit')}</Th>
               <Th>{t('Status')}</Th>
               <Th>{t('Condition')}</Th>
+              <Th aria-label={t('Actions')} />
             </Tr>
           </Thead>
           <Tbody>
@@ -252,6 +265,14 @@ const PolicyListPage: React.FC = () => {
                       }
                       return <Label color="grey">{t('Accepted')}</Label>;
                     })()}
+                  </Td>
+                  <Td isActionCell>
+                    <ResourceActionsMenu
+                      gvk={POLICY_ROW_GVK[row.policyKind]}
+                      namespace={ns}
+                      name={name}
+                      listHref="/connectivity-link/policies"
+                    />
                   </Td>
                 </Tr>
               );

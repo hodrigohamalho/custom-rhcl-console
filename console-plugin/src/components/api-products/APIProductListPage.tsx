@@ -17,6 +17,7 @@ import { APIProductGVK } from '../../models';
 import { APIProduct } from '../../types';
 import EmptyRBACState from '../common/EmptyRBACState';
 import FilterToolbar from '../common/FilterToolbar';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 const APIProductListPage: React.FC = () => {
@@ -108,6 +109,7 @@ const APIProductListPage: React.FC = () => {
               <Th>{t('Publish status')}</Th>
               <Th>{t('Approval mode')}</Th>
               <Th>{t('Tags')}</Th>
+              <Th aria-label={t('Actions')} />
             </Tr>
           </Thead>
           <Tbody>
@@ -139,6 +141,15 @@ const APIProductListPage: React.FC = () => {
                     ) : (
                       '-'
                     )}
+                  </Td>
+                  <Td isActionCell>
+                    <ResourceActionsMenu
+                      gvk={APIProductGVK}
+                      namespace={ns}
+                      name={name}
+                      listHref="/connectivity-link/api-products"
+                      displayName={displayName}
+                    />
                   </Td>
                 </Tr>
               );

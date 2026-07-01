@@ -29,6 +29,7 @@ import { PolicyConfigurationCard } from './shared/PolicyConfigurationCard';
 import { PolicyMetricsCard } from './shared/PolicyMetricsCard';
 import { summarizePolicyStatus } from './shared/state';
 import { useRateLimitMetrics } from '../../hooks/policies/useRateLimitMetrics';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 interface TokenBucketRow {
@@ -112,7 +113,6 @@ const TokenRateLimitPolicyDetailPage: React.FC = () => {
   const summary = summarizePolicyStatus(policy);
   const ref = primaryTargetRef(policy);
   const buckets = collectBuckets(policy);
-  const yamlHref = `/k8s/ns/${ns}/kuadrant.io~v1alpha1~TokenRateLimitPolicy/${name}/yaml`;
 
   return (
     <PolicyLayout
@@ -124,7 +124,14 @@ const TokenRateLimitPolicyDetailPage: React.FC = () => {
           namespace={ns || ''}
           summary={summary}
           targetRef={ref}
-          yamlHref={yamlHref}
+          actions={
+            <ResourceActionsMenu
+              gvk={{ group: 'kuadrant.io', version: 'v1alpha1', kind: 'TokenRateLimitPolicy' }}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/policies"
+            />
+          }
         />
       }
       mainColumn={

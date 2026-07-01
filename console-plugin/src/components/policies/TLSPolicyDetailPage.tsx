@@ -30,6 +30,7 @@ import { PolicyConfigurationCard } from './shared/PolicyConfigurationCard';
 import { PolicyMetricsCard } from './shared/PolicyMetricsCard';
 import { summarizePolicyStatus } from './shared/state';
 import { useTLSPolicyMetrics, CertificateInfo } from '../../hooks/policies/useTLSPolicyMetrics';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 const MetricStat: React.FC<{ label: string; value: string; tone?: 'good' | 'warn' | 'bad' | 'neutral' }> = ({
@@ -160,7 +161,6 @@ const TLSPolicyDetailPage: React.FC = () => {
     commonName?: string;
     privateKey?: { algorithm?: string; size?: number };
   };
-  const yamlHref = `/k8s/ns/${ns}/kuadrant.io~v1~TLSPolicy/${name}/yaml`;
 
   return (
     <PolicyLayout
@@ -172,7 +172,14 @@ const TLSPolicyDetailPage: React.FC = () => {
           namespace={ns || ''}
           summary={summary}
           targetRef={ref}
-          yamlHref={yamlHref}
+          actions={
+            <ResourceActionsMenu
+              gvk={{ group: 'kuadrant.io', version: 'v1', kind: 'TLSPolicy' }}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/policies"
+            />
+          }
         />
       }
       mainColumn={

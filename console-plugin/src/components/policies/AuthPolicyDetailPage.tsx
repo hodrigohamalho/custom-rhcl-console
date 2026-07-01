@@ -32,6 +32,7 @@ import { PolicyConfigurationCard } from './shared/PolicyConfigurationCard';
 import { PolicyMetricsCard } from './shared/PolicyMetricsCard';
 import { summarizePolicyStatus } from './shared/state';
 import { useAuthPolicyMetrics } from '../../hooks/policies/useAuthPolicyMetrics';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 // Inspect the spec to figure out which credential mechanisms the policy
@@ -155,7 +156,6 @@ const AuthPolicyDetailPage: React.FC = () => {
   const summary = summarizePolicyStatus(policy);
   const ref = primaryTargetRef(policy);
   const rules = collectRules(policy);
-  const yamlHref = `/k8s/ns/${ns}/kuadrant.io~v1~AuthPolicy/${name}/yaml`;
 
   return (
     <PolicyLayout
@@ -167,7 +167,14 @@ const AuthPolicyDetailPage: React.FC = () => {
           namespace={ns || ''}
           summary={summary}
           targetRef={ref}
-          yamlHref={yamlHref}
+          actions={
+            <ResourceActionsMenu
+              gvk={{ group: 'kuadrant.io', version: 'v1', kind: 'AuthPolicy' }}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/policies"
+            />
+          }
         />
       }
       mainColumn={

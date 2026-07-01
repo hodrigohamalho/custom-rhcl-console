@@ -24,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { PlanPolicyGVK, APIKeyGVK } from '../../models';
 import { PlanPolicy, APIKey } from '../../types';
 import StatusLabel from '../common/StatusLabel';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 /**
@@ -128,6 +129,7 @@ const PlansListPage: React.FC = () => {
                     <Th>{t('Tiers')}</Th>
                     <Th>{t('API Keys')}</Th>
                     <Th>{t('Status')}</Th>
+                    <Th aria-label={t('Actions')} />
                   </Tr>
                 </Thead>
                 {(policies || []).map((p, idx) => {
@@ -185,9 +187,17 @@ const PlansListPage: React.FC = () => {
                         <Td>
                           <StatusLabel conditions={p.status?.conditions} />
                         </Td>
+                        <Td isActionCell>
+                          <ResourceActionsMenu
+                            gvk={PlanPolicyGVK}
+                            namespace={ns}
+                            name={p.metadata?.name || ''}
+                            listHref="/connectivity-link/plans"
+                          />
+                        </Td>
                       </Tr>
                       <Tr isExpanded={isExpanded}>
-                        <Td colSpan={6} noPadding>
+                        <Td colSpan={7} noPadding>
                           <ExpandableRowContent>
                             <PlanDetails policy={p} keysByNsAndTier={keysByNsAndTier} />
                           </ExpandableRowContent>

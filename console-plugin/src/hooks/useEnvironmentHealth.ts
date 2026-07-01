@@ -242,7 +242,7 @@ export function useEnvironmentHealth(): Result {
           { label: 'Healthy', count: gwHealthyCount, severity: 'healthy' as HealthSeverity },
           { label: 'Warning', count: gwWarning, severity: 'warning' as HealthSeverity },
         ],
-        href: '/k8s/all-namespaces/gateway.networking.k8s.io~v1~Gateway',
+        href: '/connectivity-link/gateways',
       },
       {
         id: 'httproutes',
@@ -252,7 +252,7 @@ export function useEnvironmentHealth(): Result {
           { label: 'Healthy', count: rtHealthy, severity: 'healthy' as HealthSeverity },
           { label: 'Warning', count: rtWarning, severity: 'warning' as HealthSeverity },
         ],
-        href: '/k8s/all-namespaces/gateway.networking.k8s.io~v1~HTTPRoute',
+        href: '/connectivity-link/httproutes',
       },
       {
         id: 'policies',

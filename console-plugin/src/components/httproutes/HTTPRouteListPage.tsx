@@ -13,6 +13,7 @@ import StatusLabel from '../common/StatusLabel';
 import HostnameCell from '../common/HostnameCell';
 import EmptyRBACState from '../common/EmptyRBACState';
 import FilterToolbar from '../common/FilterToolbar';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 const HTTPRouteListPage: React.FC = () => {
@@ -120,6 +121,7 @@ const HTTPRouteListPage: React.FC = () => {
               <Th>{t('Parent gateway')}</Th>
               <Th>{t('Status')}</Th>
               <Th>{t('Backend refs')}</Th>
+              <Th aria-label={t('Actions')} />
             </Tr>
           </Thead>
           <Tbody>
@@ -153,6 +155,14 @@ const HTTPRouteListPage: React.FC = () => {
                     <StatusLabel conditions={route.status?.parents?.[0]?.conditions} />
                   </Td>
                   <Td>{backendCount}</Td>
+                  <Td isActionCell>
+                    <ResourceActionsMenu
+                      gvk={HTTPRouteGVK}
+                      namespace={ns}
+                      name={name}
+                      listHref="/connectivity-link/httproutes"
+                    />
+                  </Td>
                 </Tr>
               );
             })}

@@ -38,6 +38,7 @@ import StatusLabel from '../common/StatusLabel';
 import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 import { OpenInTempoButton } from '../common/OpenInTempoButton';
 import TrafficPanel from '../common/TrafficPanel';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
 import { EffectivePolicyStack } from '../policies/EffectivePolicyStack';
 import { BackendsTab } from './backends/BackendsTab';
@@ -113,6 +114,12 @@ const HTTPRouteDetailPage: React.FC = () => {
                 tags: { 'http.route': name || '' },
                 lookback: '1h',
               }}
+            />
+            <ResourceActionsMenu
+              gvk={{ group: 'gateway.networking.k8s.io', version: 'v1', kind: 'HTTPRoute' }}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/httproutes"
             />
           </div>
         </div>

@@ -15,6 +15,7 @@ import StatusLabel from '../common/StatusLabel';
 import HostnameCell from '../common/HostnameCell';
 import EmptyRBACState from '../common/EmptyRBACState';
 import FilterToolbar from '../common/FilterToolbar';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 const GatewayListPage: React.FC = () => {
@@ -121,6 +122,7 @@ const GatewayListPage: React.FC = () => {
               <Th>{t('Status')}</Th>
               <Th>{t('Listeners')}</Th>
               <Th>{t('Hostnames')}</Th>
+              <Th aria-label={t('Actions')} />
             </Tr>
           </Thead>
           <Tbody>
@@ -157,6 +159,14 @@ const GatewayRow: React.FC<{ gateway: Gateway }> = ({ gateway }) => {
       </Td>
       <Td>{gateway.spec?.listeners?.length ?? 0}</Td>
       <Td><HostnameCell hostnames={hostnames} /></Td>
+      <Td isActionCell>
+        <ResourceActionsMenu
+          gvk={GatewayGVK}
+          namespace={ns}
+          name={name}
+          listHref="/connectivity-link/gateways"
+        />
+      </Td>
     </Tr>
   );
 };

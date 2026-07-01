@@ -52,6 +52,7 @@ import TrafficPanel from '../common/TrafficPanel';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
 import TLSHealthCard from '../health/TLSHealthCard';
 import DNSHealthCard from '../health/DNSHealthCard';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 const GatewayDetailPage: React.FC = () => {
@@ -140,6 +141,12 @@ const GatewayDetailPage: React.FC = () => {
             >
               {t('Gateway pods')}
             </Button>
+            <ResourceActionsMenu
+              gvk={{ group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' }}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/gateways"
+            />
           </div>
         </div>
       </PageSection>

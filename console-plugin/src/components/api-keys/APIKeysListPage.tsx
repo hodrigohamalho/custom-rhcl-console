@@ -34,6 +34,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { APIKeyGVK } from '../../models';
 import { APIKey, getAPIKeyPhase } from '../../types';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import '../../styles/plugin-glass.css';
 
 /**
@@ -367,6 +368,7 @@ const APIKeysListPage: React.FC = () => {
                     <Th>{t('Phase')}</Th>
                     <Th>{t('Created')}</Th>
                     <Th>{t('Actions')}</Th>
+                    <Th aria-label={t('Actions')} />
                   </Tr>
                 </Thead>
                 <Tbody>
@@ -430,6 +432,14 @@ const APIKeysListPage: React.FC = () => {
                               </FlexItem>
                             </Flex>
                           )}
+                        </Td>
+                        <Td isActionCell>
+                          <ResourceActionsMenu
+                            gvk={APIKeyGVK}
+                            namespace={ns}
+                            name={key.metadata?.name || ''}
+                            listHref="/connectivity-link/api-keys"
+                          />
                         </Td>
                       </Tr>
                     );
