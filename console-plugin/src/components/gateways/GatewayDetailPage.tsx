@@ -52,6 +52,7 @@ import TrafficPanel from '../common/TrafficPanel';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
 import TLSHealthCard from '../health/TLSHealthCard';
 import DNSHealthCard from '../health/DNSHealthCard';
+import '../../styles/plugin-glass.css';
 
 const GatewayDetailPage: React.FC = () => {
   const { ns, name } = useParams<{ ns: string; name: string }>();
@@ -88,7 +89,7 @@ const GatewayDetailPage: React.FC = () => {
   const hostnames = getGatewayExternalHostnames(gateway);
 
   return (
-    <>
+    <div className="rhcl-plugin-root">
       <PageSection variant="default">
         <Breadcrumb>
           <BreadcrumbItem>
@@ -130,8 +131,12 @@ const GatewayDetailPage: React.FC = () => {
             <Button
               variant="secondary"
               icon={<CubeIcon />}
-              component="a"
-              href={`/search/ns/${ns}?kind=Pod&q=gateway.networking.k8s.io%2Fgateway-name%3D${encodeURIComponent(name || '')}`}
+              component={(props) => (
+                <Link
+                  {...props}
+                  to={`/search/ns/${ns}?kind=Pod&q=gateway.networking.k8s.io%2Fgateway-name%3D${encodeURIComponent(name || '')}`}
+                />
+              )}
             >
               {t('Gateway pods')}
             </Button>
@@ -259,7 +264,7 @@ const GatewayDetailPage: React.FC = () => {
           </Tab>
         </Tabs>
       </PageSection>
-    </>
+    </div>
   );
 };
 

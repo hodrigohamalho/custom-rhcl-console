@@ -41,6 +41,7 @@ import TrafficPanel from '../common/TrafficPanel';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
 import { EffectivePolicyStack } from '../policies/EffectivePolicyStack';
 import { BackendsTab } from './backends/BackendsTab';
+import '../../styles/plugin-glass.css';
 
 const HTTPRouteDetailPage: React.FC = () => {
   const { ns, name } = useParams<{ ns: string; name: string }>();
@@ -74,7 +75,7 @@ const HTTPRouteDetailPage: React.FC = () => {
   const parentConditions = route.status?.parents?.[0]?.conditions;
 
   return (
-    <>
+    <div className="rhcl-plugin-root">
       <PageSection variant="default">
         <Breadcrumb>
           <BreadcrumbItem>
@@ -256,7 +257,7 @@ const HTTPRouteDetailPage: React.FC = () => {
           </Tab>
         </Tabs>
       </PageSection>
-    </>
+    </div>
   );
 };
 
