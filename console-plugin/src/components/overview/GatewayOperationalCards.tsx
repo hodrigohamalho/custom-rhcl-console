@@ -14,7 +14,8 @@ import {
   AngleRightIcon,
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
-import { GatewayOpData } from './mockOverviewData';
+import { Link } from 'react-router-dom';
+import { GatewayOpData } from './types';
 
 interface Props {
   gateways: GatewayOpData[];
@@ -80,7 +81,11 @@ export const GatewayOperationalCards: React.FC<Props> = ({ gateways }) => {
         >
           <FlexItem>{t('Gateways')}</FlexItem>
           <FlexItem>
-            <Button variant="link" isInline component="a" href="/k8s/all-namespaces/gateway.networking.k8s.io~v1~Gateway">
+            <Button
+              variant="link"
+              isInline
+              component={(props) => <Link {...props} to="/connectivity-link/gateways" />}
+            >
               {t('View all')}
             </Button>
           </FlexItem>
@@ -92,7 +97,7 @@ export const GatewayOperationalCards: React.FC<Props> = ({ gateways }) => {
             const errorIsBad = gw.errorRatePct >= 5;
             return (
               <FlexItem key={gw.id}>
-                <a href={gw.href} style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>
+                <Link to={gw.href} style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>
                   <div
                     style={{
                       padding: 12,
@@ -139,7 +144,7 @@ export const GatewayOperationalCards: React.FC<Props> = ({ gateways }) => {
                       <Metric label={t('Policies')} value={String(gw.policiesCount)} />
                     </div>
                   </div>
-                </a>
+                </Link>
               </FlexItem>
             );
           })}

@@ -10,7 +10,8 @@ import {
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useTranslation } from 'react-i18next';
-import { PolicyImpactRow } from './mockOverviewData';
+import { Link } from 'react-router-dom';
+import { PolicyImpactRow } from './types';
 
 interface Props {
   rows: PolicyImpactRow[];
@@ -45,7 +46,11 @@ export const PolicyImpactTable: React.FC<Props> = ({ rows }) => {
         >
           <FlexItem>{t('Policies')}</FlexItem>
           <FlexItem>
-            <Button variant="link" isInline component="a" href="/k8s/all-namespaces/kuadrant.io~v1~AuthPolicy">
+            <Button
+              variant="link"
+              isInline
+              component={(props) => <Link {...props} to="/connectivity-link/policies" />}
+            >
               {t('View all')}
             </Button>
           </FlexItem>
@@ -66,7 +71,7 @@ export const PolicyImpactTable: React.FC<Props> = ({ rows }) => {
             {rows.map((r) => (
               <Tr key={r.id}>
                 <Td>
-                  <a href={r.href}>{r.name}</a>
+                  <Link to={r.href}>{r.name}</Link>
                 </Td>
                 <Td>{r.namespace}</Td>
                 <Td>{t(r.typeLabel)}</Td>
