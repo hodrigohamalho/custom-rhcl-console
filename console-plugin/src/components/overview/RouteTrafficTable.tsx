@@ -9,8 +9,9 @@ import {
 } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import Sparkline from './Sparkline';
-import { RouteTrafficRow } from './mockOverviewData';
+import { RouteTrafficRow } from './types';
 
 interface Props {
   rows: RouteTrafficRow[];
@@ -31,7 +32,11 @@ export const RouteTrafficTable: React.FC<Props> = ({ rows }) => {
         >
           <FlexItem>{t('HTTPRoutes')}</FlexItem>
           <FlexItem>
-            <Button variant="link" isInline component="a" href="/k8s/all-namespaces/gateway.networking.k8s.io~v1~HTTPRoute">
+            <Button
+              variant="link"
+              isInline
+              component={(props) => <Link {...props} to="/connectivity-link/httproutes" />}
+            >
               {t('View all')}
             </Button>
           </FlexItem>
@@ -60,7 +65,7 @@ export const RouteTrafficTable: React.FC<Props> = ({ rows }) => {
               return (
                 <Tr key={r.id}>
                   <Td>
-                    <a href={r.href}>{r.name}</a>
+                    <Link to={r.href}>{r.name}</Link>
                   </Td>
                   <Td>{r.namespace}</Td>
                   <Td>{r.gatewayName}</Td>

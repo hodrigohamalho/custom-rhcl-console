@@ -8,7 +8,7 @@ import {
   CubesIcon,
 } from '@patternfly/react-icons';
 import EnvironmentHealthCard from './EnvironmentHealthCard';
-import { EnvironmentHealthCardData } from './mockOverviewData';
+import { EnvironmentHealthCardData } from './types';
 
 interface Props {
   cards: EnvironmentHealthCardData[];

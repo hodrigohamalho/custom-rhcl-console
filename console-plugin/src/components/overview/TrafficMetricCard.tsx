@@ -6,7 +6,7 @@ import {
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
 import Sparkline from './Sparkline';
-import { TrafficMetricData } from './mockOverviewData';
+import { TrafficMetricData } from './types';
 
 interface Props {
   data: TrafficMetricData;

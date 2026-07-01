@@ -13,10 +13,11 @@ import {
   AngleRightIcon,
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import {
   EnvironmentHealthCardData,
   HealthSeverity,
-} from './mockOverviewData';
+} from './types';
 
 interface EnvironmentHealthCardProps {
   data: EnvironmentHealthCardData;
@@ -94,8 +95,8 @@ export const EnvironmentHealthCard: React.FC<EnvironmentHealthCardProps> = ({
                 </Flex>
               </FlexItem>
               <FlexItem>
-                <a
-                  href={data.href}
+                <Link
+                  to={data.href}
                   style={{ display: 'inline-flex' }}
                   aria-label={t('Open all {{title}}', { title: t(data.title) })}
                 >
@@ -103,7 +104,7 @@ export const EnvironmentHealthCard: React.FC<EnvironmentHealthCardProps> = ({
                     color="var(--pf-v5-global--Color--200)"
                     aria-hidden="true"
                   />
-                </a>
+                </Link>
               </FlexItem>
             </Flex>
           </FlexItem>

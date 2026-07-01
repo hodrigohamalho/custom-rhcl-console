@@ -14,7 +14,8 @@ import {
   AngleRightIcon,
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
-import { NeedsAttentionItem } from './mockOverviewData';
+import { Link } from 'react-router-dom';
+import { NeedsAttentionItem } from './types';
 
 interface Props {
   items: NeedsAttentionItem[];
@@ -62,8 +63,8 @@ export const NeedsAttentionPanel: React.FC<Props> = ({ items, onViewAll }) => {
           <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsSm' }}>
             {sorted.map((it) => (
               <FlexItem key={it.id}>
-                <a
-                  href={it.href}
+                <Link
+                  to={it.href}
                   style={{
                     display: 'block',
                     padding: '8px 0',
@@ -128,7 +129,7 @@ export const NeedsAttentionPanel: React.FC<Props> = ({ items, onViewAll }) => {
                       </Flex>
                     </FlexItem>
                   </Flex>
-                </a>
+                </Link>
               </FlexItem>
             ))}
           </Flex>

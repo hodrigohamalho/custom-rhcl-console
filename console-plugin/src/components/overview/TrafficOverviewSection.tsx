@@ -8,7 +8,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import TrafficMetricCard from './TrafficMetricCard';
-import { TrafficMetricData } from './mockOverviewData';
+import { TrafficMetricData } from './types';
 
 interface Props {
   metrics: TrafficMetricData[];

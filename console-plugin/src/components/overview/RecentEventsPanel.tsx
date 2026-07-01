@@ -9,7 +9,8 @@ import {
   Label,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
-import { RecentEvent } from './mockOverviewData';
+import { Link } from 'react-router-dom';
+import { RecentEvent } from './types';
 
 interface Props {
   events: RecentEvent[];
@@ -45,7 +46,11 @@ export const RecentEventsPanel: React.FC<Props> = ({ events }) => {
         >
           <FlexItem>{t('Recent Events')}</FlexItem>
           <FlexItem>
-            <Button variant="link" isInline component="a" href="#/events">
+            <Button
+              variant="link"
+              isInline
+              component={(props) => <Link {...props} to="/k8s/all-namespaces/core~v1~Event" />}
+            >
               {t('View all')}
             </Button>
           </FlexItem>
@@ -55,8 +60,8 @@ export const RecentEventsPanel: React.FC<Props> = ({ events }) => {
         <Flex direction={{ default: 'column' }} spaceItems={{ default: 'spaceItemsSm' }}>
           {events.map((e) => (
             <FlexItem key={e.id}>
-              <a
-                href={e.href}
+              <Link
+                to={e.href}
                 style={{
                   display: 'block',
                   padding: '8px 0',
@@ -87,7 +92,7 @@ export const RecentEventsPanel: React.FC<Props> = ({ events }) => {
                     </Label>
                   </FlexItem>
                 </Flex>
-              </a>
+              </Link>
             </FlexItem>
           ))}
         </Flex>

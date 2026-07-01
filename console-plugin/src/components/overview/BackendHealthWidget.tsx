@@ -14,8 +14,9 @@ import {
   ExclamationCircleIcon,
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import Sparkline from './Sparkline';
-import { BackendRow, HealthSeverity } from './mockOverviewData';
+import { BackendRow, HealthSeverity } from './types';
 
 interface Props {
   rows: BackendRow[];
@@ -121,7 +122,11 @@ export const BackendHealthWidget: React.FC<Props> = ({ rows }) => {
         >
           <FlexItem>{t('Backends')}</FlexItem>
           <FlexItem>
-            <Button variant="link" isInline component="a" href="#/backends">
+            <Button
+              variant="link"
+              isInline
+              component={(props) => <Link {...props} to="/connectivity-link/httproutes" />}
+            >
               {t('View all')}
             </Button>
           </FlexItem>
@@ -178,7 +183,7 @@ export const BackendHealthWidget: React.FC<Props> = ({ rows }) => {
                 {rows.map((r) => (
                   <Tr key={r.id}>
                     <Td>
-                      <a href={r.href}>{r.name}</a>
+                      <Link to={r.href}>{r.name}</Link>
                     </Td>
                     <Td>{r.namespace}</Td>
                     <Td>
