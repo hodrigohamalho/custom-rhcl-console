@@ -1,15 +1,20 @@
 /**
- * Deep-linking into the cluster's Tempo gateway (openshift-mode).
+ * Deep-linking to the cluster's native Tempo trace explorer.
  *
- * The Tempo gateway exposes the Jaeger-compatible search UI at
- *   `/api/traces/v1/{tenant}/`
- * and a structured search REST API at
- *   `/api/traces/v1/{tenant}/tempo/api/search`
+ * Routes traffic into the OpenShift Console's **Observe → Traces** page
+ * at `/observe/traces?...` instead of opening the Tempo gateway's
+ * Jaeger UI in a new tab. Two reasons:
+ *   1. UX consistency — operators land on the same trace explorer that
+ *      Observe → Traces already exposes via the platform plugin, with
+ *      the cluster identity propagated automatically.
+ *   2. Auth — the embedded /observe/traces page reuses the Console's
+ *      OAuth session; the Jaeger UI on `tempo-gateway` needed a token
+ *      with `traces.read` on the tenant, which kube:admin doesn't
+ *      necessarily have.
  *
- * We auto-discover the Tempo gateway Route host and the tenant name from
- * the TempoStack CR. When Tempo isn't installed, the hook returns
- * `available: false` so callers can render a disabled button + tooltip
- * instead of a dead link.
+ * The TempoStack CR still drives availability + tenant resolution.
+ * When Tempo isn't installed, the hook returns `available: false` so
+ * callers can render a disabled button + tooltip.
  */
 import {
   useK8sWatchResource,
@@ -18,12 +23,7 @@ import {
 import { usePluginConfig } from './pluginConfig';
 
 const DEFAULT_TEMPO_NS = 'tempo';
-const DEFAULT_TEMPO_GATEWAY_ROUTE = 'tempo-tempo-rhcl-gateway';
 const DEFAULT_TEMPO_STACK_NAME = 'tempo-rhcl';
-
-interface RouteResource extends K8sResourceCommon {
-  spec?: { host?: string };
-}
 
 interface TempoStackResource extends K8sResourceCommon {
   spec?: {
@@ -34,63 +34,45 @@ interface TempoStackResource extends K8sResourceCommon {
 }
 
 /**
- * Tempo gateway query filters. The hook builds a URL that opens the
- * Jaeger UI pre-filtered by these tags — typically a service.name (to
- * land on every span from the gateway, banking-api-v1, limitador, etc.)
- * plus optional duration/error filters when the caller wants to zoom in
- * on slow or failing requests.
+ * Search context the trace explorer should open with. Only `serviceName`
+ * and `lookback` are honored by the native Observe → Traces query
+ * params today; richer filters (`tags`, `minDurationMs`) are accepted
+ * for API stability — when the platform plugin starts respecting them
+ * we can pass them through without touching every call site.
  */
 export interface TempoSearchVars {
-  /**
-   * service.name to filter by. Match the OTel resource attribute on the
-   * span — for the gateway it's `rhcl-gateway`, for instrumented apps it
-   * follows OTEL_SERVICE_NAME (which the OTel Operator sets to
-   * `<deployment-name>` by default).
-   */
+  /** service.name to pre-fill the Filter dropdown. */
   serviceName?: string;
-  /** Free-form tag filter, e.g. `{"http.status_code":"500"}`. */
+  /** Free-form tag filter (reserved for future use). */
   tags?: Record<string, string>;
-  /** Min duration in ms. */
+  /** Min duration in ms (reserved for future use). */
   minDurationMs?: number;
-  /** Lookback window (eg. "1h", "15m"). Defaults to 1h. */
+  /** Lookback window — `5m`, `30m`, `1h`, … Default `1h`. */
   lookback?: string;
 }
 
 export interface TempoLink {
-  /** Full https URL to the Jaeger UI on the Tempo gateway, or null when unavailable. */
+  /** Internal Console URL (`/observe/traces?...`), or null when unavailable. */
   url: string | null;
-  /** True while the Route/TempoStack lookups are in flight. */
+  /** True while the TempoStack lookup is in flight. */
   loading: boolean;
   /** False when Tempo isn't installed in this cluster. */
   available: boolean;
 }
 
-function tagsParam(tags: Record<string, string>): string {
-  // Jaeger UI expects tags as JSON-encoded URL param: tags={"k":"v"}
-  return JSON.stringify(tags);
-}
-
 /**
- * Resolve the deep-link URL to a pre-filtered Tempo trace search.
+ * Resolve the deep-link URL into the Console's Observe → Traces page,
+ * pre-targeted at the right TempoStack + tenant.
  *
- * Falls back to `available: false` when the Tempo gateway Route isn't
- * present (TempoStack not deployed, or operator not installed).
+ * Returns `available: false` when no TempoStack lives in the resolved
+ * namespace (operator missing, or stack not deployed yet).
  */
 export function useTempoLink(vars: TempoSearchVars = {}): TempoLink {
-  // Pull namespace/route/stack overrides from the ConfigMap if present,
-  // fall back to the role's defaults otherwise.
   const { config } = usePluginConfig();
   const namespace = config.tempoNamespace || DEFAULT_TEMPO_NS;
-  const routeName = config.tempoGatewayRouteName || DEFAULT_TEMPO_GATEWAY_ROUTE;
   const stackName = config.tempoStackName || DEFAULT_TEMPO_STACK_NAME;
 
-  const [route, routeLoaded, routeErr] = useK8sWatchResource<RouteResource>({
-    groupVersionKind: { group: 'route.openshift.io', version: 'v1', kind: 'Route' },
-    namespace,
-    name: routeName,
-    isList: false,
-  });
-  const [stack, stackLoaded] = useK8sWatchResource<TempoStackResource>({
+  const [stack, stackLoaded, stackErr] = useK8sWatchResource<TempoStackResource>({
     groupVersionKind: {
       group: 'tempo.grafana.com',
       version: 'v1alpha1',
@@ -101,29 +83,36 @@ export function useTempoLink(vars: TempoSearchVars = {}): TempoLink {
     isList: false,
   });
 
-  if ((!routeLoaded && !routeErr) || !stackLoaded) {
+  if (!stackLoaded && !stackErr) {
     return { url: null, loading: true, available: false };
   }
-  const host = route?.spec?.host;
-  if (routeErr || !host) {
+  if (stackErr || !stack) {
     return { url: null, loading: false, available: false };
   }
 
-  // openshift-mode TempoStacks always have at least one tenant. We pick the
-  // first one; in this lab there's a single `dev` tenant. When a deployment
-  // has multiple tenants the caller should expose a picker; for now sticking
-  // with the first matches the existing convention used by Grafana queries.
-  const tenant = stack?.spec?.tenants?.authentication?.[0]?.tenantName || 'dev';
+  // openshift-mode TempoStacks always have at least one tenant. We pick
+  // the first one — every PoC cluster sticks with a single `dev` tenant.
+  // When a deployment has multiple tenants the caller should expose a
+  // picker; for now we match the existing convention used by Grafana
+  // queries.
+  const tenant = stack.spec?.tenants?.authentication?.[0]?.tenantName || 'dev';
 
+  // Observe → Traces query params the Console plugin reads. Per the
+  // route documented at /observe/traces:
+  //   - namespace: TempoStack namespace
+  //   - name:      TempoStack metadata.name
+  //   - tenant:    tenant the search runs against
+  //   - start:     lookback window (`30m`, `1h`, …) — not an absolute time
   const params = new URLSearchParams();
-  if (vars.serviceName) params.set('service', vars.serviceName);
-  if (vars.tags && Object.keys(vars.tags).length > 0) {
-    params.set('tags', tagsParam(vars.tags));
-  }
-  if (vars.minDurationMs) params.set('minDuration', `${vars.minDurationMs}ms`);
-  params.set('lookback', vars.lookback || '1h');
-  params.set('limit', '20');
+  params.set('namespace', namespace);
+  params.set('name', stackName);
+  params.set('tenant', tenant);
+  params.set('start', vars.lookback || '1h');
+  // `serviceName` isn't a documented query param yet but the native
+  // page has a Service Name filter — leaving it on the URL is a no-op
+  // today and a free win the day the platform plugin honors it.
+  if (vars.serviceName) params.set('serviceName', vars.serviceName);
 
-  const url = `https://${host}/api/traces/v1/${tenant}/search?${params.toString()}`;
+  const url = `/observe/traces?${params.toString()}`;
   return { url, loading: false, available: true };
 }

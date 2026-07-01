@@ -28,7 +28,8 @@ export type GrafanaDashboard =
   | 'api-overview'
   | 'api-consumers'
   | 'authorino'
-  | 'limitador';
+  | 'limitador'
+  | 'api-costs';
 
 // Suffix per dashboard kind. Combined with the configurable prefix
 // (default "rhcl-") to form the dashboard UID — so an admin who imports
@@ -39,6 +40,7 @@ const DASHBOARD_SUFFIXES: Record<GrafanaDashboard, string> = {
   'api-consumers': 'api-consumers',
   authorino: 'authorino',
   limitador: 'limitador',
+  'api-costs': 'api-costs',
 };
 
 /**

@@ -260,6 +260,10 @@ data:
   tempoNamespace: tempo
   tempoGatewayRouteName: tempo-tempo-rhcl-gateway
   tempoStackName: tempo-rhcl
+
+  # Developer Portal — when set, adds a "Developer Portal" item to the
+  # plugin sidebar that opens the URL in a new tab. Omit to hide the item.
+  developerPortalUrl: https://developer-portal.bb.com.br
 ```
 
 After applying, restart the plugin pod so the watch picks up the new

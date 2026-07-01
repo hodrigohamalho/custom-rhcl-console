@@ -37,6 +37,7 @@ import APIKeysTable from './APIKeysTable';
 import { APIProductBackendsCard } from './APIProductBackendsCard';
 import TrafficSummary from './TrafficSummary';
 import TopConsumers from './TopConsumers';
+import '../../styles/plugin-glass.css';
 
 const APIOverviewPage: React.FC = () => {
   const { ns, name } = useParams<{ ns: string; name: string }>();
@@ -170,7 +171,7 @@ const APIOverviewContent: React.FC<{
   const routeName = targetRef?.name || '';
 
   return (
-    <>
+    <div className="rhcl-plugin-root">
       <PageSection variant="default">
         <Breadcrumb>
           <BreadcrumbItem>
@@ -423,7 +424,7 @@ const APIOverviewContent: React.FC<{
           </GridItem>
         </Grid>
       </PageSection>
-    </>
+    </div>
   );
 };
 
