@@ -487,9 +487,12 @@ const CostMonitoringPage: React.FC = () => {
 
   const [refreshKey, setRefreshKey] = React.useState(0);
 
+  // Preserve `.rhcl-plugin-root` on the loading path — same fix pattern
+  // as the other top-level plugin pages so the surface stays dark-gray
+  // instead of flashing pure black between navigation and data arrival.
   if (!loaded) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('Cost Monitoring')}</Title>
         </PageSection>
@@ -498,7 +501,7 @@ const CostMonitoringPage: React.FC = () => {
             <Spinner />
           </Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 

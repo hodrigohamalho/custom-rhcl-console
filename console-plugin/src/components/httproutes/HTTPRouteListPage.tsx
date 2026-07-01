@@ -65,22 +65,25 @@ const HTTPRouteListPage: React.FC = () => {
     return items;
   }, [httpRoutes, selectedNamespace, searchValue, selectedStatuses]);
 
+  // Every early-return path must keep `.rhcl-plugin-root` on the
+  // outermost element too — see GatewayListPage for the full rationale
+  // (avoids the black flash while HTTPRoute data loads).
   if (!loaded) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
         </PageSection>
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 
   if (!hasAccess) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
         </PageSection>
@@ -92,7 +95,7 @@ const HTTPRouteListPage: React.FC = () => {
             kind="HTTPRoute"
           />
         </PageSection>
-      </>
+      </div>
     );
   }
 

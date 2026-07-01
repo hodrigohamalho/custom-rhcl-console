@@ -142,8 +142,10 @@ const AuthPolicyDetailPage: React.FC = () => {
 
   const { metrics, loaded: metricsLoaded, metricsAvailable } = useAuthPolicyMetrics(policy);
 
+  // Wrap the spinner in `.rhcl-plugin-root` so the loading state paints
+  // the plugin's `secondary--default` surface instead of Console's black.
   if (!loaded) {
-    return <Bullseye><Spinner /></Bullseye>;
+    return <div className="rhcl-plugin-root"><Bullseye><Spinner /></Bullseye></div>;
   }
   if (!policy) {
     return (

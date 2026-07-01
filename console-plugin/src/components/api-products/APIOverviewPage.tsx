@@ -48,13 +48,15 @@ const APIOverviewPage: React.FC = () => {
     namespace: ns,
   });
 
+  // Preserve `.rhcl-plugin-root` during load so this doesn't flash the
+  // Console's black background before APIProduct data arrives.
   if (!loaded || !product) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 

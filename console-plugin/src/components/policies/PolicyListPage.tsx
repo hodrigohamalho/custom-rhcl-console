@@ -147,16 +147,18 @@ const PolicyListPage: React.FC = () => {
     return items;
   }, [allPolicies, selectedNamespace, searchValue, selectedStatuses, selectedTypes]);
 
+  // Preserve `.rhcl-plugin-root` while policies load — avoids the black
+  // background flash before the list renders.
   if (!loaded) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('Policies')}</Title>
         </PageSection>
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 

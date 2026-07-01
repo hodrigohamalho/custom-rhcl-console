@@ -66,22 +66,27 @@ const GatewayListPage: React.FC = () => {
     return items;
   }, [gateways, selectedNamespace, searchValue, selectedStatuses]);
 
+  // Every early return has to keep the `rhcl-plugin-root` wrapper on
+  // the outermost element too — otherwise the loading spinner and the
+  // RBAC-denied state paint over the Console's raw black chrome instead
+  // of the plugin's softer `secondary--default` surface, and the page
+  // "flashes black" every navigation before the real data lands.
   if (!loaded) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('Gateways')}</Title>
         </PageSection>
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 
   if (!hasAccess) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('Gateways')}</Title>
         </PageSection>
@@ -93,7 +98,7 @@ const GatewayListPage: React.FC = () => {
             kind="Gateway"
           />
         </PageSection>
-      </>
+      </div>
     );
   }
 

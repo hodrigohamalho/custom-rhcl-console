@@ -56,22 +56,25 @@ const APIProductListPage: React.FC = () => {
     return items;
   }, [apiProducts, searchValue, selectedStatuses]);
 
+  // Keep `.rhcl-plugin-root` on all early returns so the loading and
+  // RBAC-denied states stay on the plugin's dark-gray surface instead
+  // of flashing the Console's black background.
   if (!loaded) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('API Products')}</Title>
         </PageSection>
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 
   if (!hasAccess) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('API Products')}</Title>
         </PageSection>
@@ -83,7 +86,7 @@ const APIProductListPage: React.FC = () => {
             kind="APIProduct"
           />
         </PageSection>
-      </>
+      </div>
     );
   }
 

@@ -77,13 +77,16 @@ const GatewayDetailPage: React.FC = () => {
     [gateways, name],
   );
 
+  // Wrap the loading state so the page doesn't flash the Console's raw
+  // black background before Gateway data arrives — same rationale as
+  // the list page (`.rhcl-plugin-root` paints `secondary--default`).
   if (!loaded || !gateway) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 

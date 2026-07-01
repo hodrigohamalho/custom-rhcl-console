@@ -61,13 +61,15 @@ const HTTPRouteDetailPage: React.FC = () => {
     [routes, name],
   );
 
+  // Keep the plugin surface even during load, otherwise the page flashes
+  // black on the Console dark theme before HTTPRoute data arrives.
   if (!loaded || !route) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 

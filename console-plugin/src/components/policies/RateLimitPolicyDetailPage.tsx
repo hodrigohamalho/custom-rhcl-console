@@ -98,7 +98,9 @@ const RateLimitPolicyDetailPage: React.FC = () => {
 
   const { metrics, loaded: metricsLoaded, metricsAvailable } = useRateLimitMetrics(policy);
 
-  if (!loaded) return <Bullseye><Spinner /></Bullseye>;
+  // `.rhcl-plugin-root` on the loading state keeps the dark surface
+  // consistent instead of flashing the Console's raw black chrome.
+  if (!loaded) return <div className="rhcl-plugin-root"><Bullseye><Spinner /></Bullseye></div>;
   if (!policy) {
     return (
       <EmptyState headingLevel="h2" titleText={t('RateLimitPolicy not found')}>
