@@ -46,6 +46,36 @@
   background: transparent !important;
 }
 
+/* --------- List-page content surfaces ---------
+ *
+ * The Overview page wraps every section in <Card>, so its content
+ * lives on the glass surface. Most list pages drop a FilterToolbar +
+ * raw <Table> directly onto the PageSection, which in dark mode reads
+ * as a flat black rectangle — the customer complaint that motivated
+ * this rule ("os cards do Overview eram o padrão, os outros ficaram
+ * fora de padrão").
+ *
+ * Give every non-title PageSection a subtle glass surface. Deliberately
+ * NOT a full hovering card: no lift-on-hover, softer shadow, no
+ * gradient. The intent is "here's the content plane," not "this whole
+ * section is a card." Real cards nested inside (Overview's KPI tiles,
+ * Traffic panel, etc.) already have the nested-card rule further down
+ * to sit one step lighter — the hierarchy stays legible.
+ *
+ * `:not(:first-of-type)` excludes the title section (which owns the
+ * top gradient). `:not(.rhcl-page-header)` is an explicit opt-out for
+ * detail-page headers that render their own layout.
+ */
+.rhcl-plugin-root .pf-v6-c-page__main-section:not(:first-of-type):not(.rhcl-page-header),
+.rhcl-plugin-root .pf-v5-c-page__main-section:not(:first-of-type):not(.rhcl-page-header) {
+  background: var(--pf-t--global--background--color--floating--default) !important;
+  border: 1px solid var(--pf-t--global--border--color--default) !important;
+  border-radius: var(--pf-t--global--border--radius--medium) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04) !important;
+  margin: 0 24px 16px 24px;
+}
+
+
 /* --------- Card / glass surface ---------
  *
  * Targets PatternFly v5 + v6 Card class names. The `!important`

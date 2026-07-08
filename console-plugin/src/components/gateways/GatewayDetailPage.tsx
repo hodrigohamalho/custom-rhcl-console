@@ -34,7 +34,7 @@ import {
   Label,
   CodeBlock,
   CodeBlockCode,
-  Button,
+  DropdownItem,
 } from '@patternfly/react-core';
 import { CubeIcon } from '@patternfly/react-icons';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
@@ -127,23 +127,12 @@ const GatewayDetailPage: React.FC = () => {
               label={t('Gateway traces')}
               vars={{ serviceName: 'rhcl-gateway', lookback: '1h' }}
             />
-            {/* Drops the operator into the OpenShift Console's native
-                Pods page, filtered by the Gateway API label every
-                gateway-managed pod carries. From there they get
-                Logs / Terminal / Events / YAML for free — no need to
-                re-implement any of that here. */}
-            <Button
-              variant="secondary"
-              icon={<CubeIcon />}
-              component={(props) => (
-                <Link
-                  {...props}
-                  to={`/search/ns/${ns}?kind=Pod&q=gateway.networking.k8s.io%2Fgateway-name%3D${encodeURIComponent(name || '')}`}
-                />
-              )}
-            >
-              {t('Gateway pods')}
-            </Button>
+            {/* "Pods" lives inside the kebab as the top item, ahead of
+                Edit / Delete. As its own outside button it read as
+                heavier than it deserves — one navigation quick-link
+                shouldn't have the same visual weight as Grafana / Tempo
+                deep-links. Moving it in also matches the pattern the
+                Console's own detail pages use for secondary actions. */}
             <ResourceActionsMenu
               gvk={{ group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' }}
               namespace={ns || ''}
@@ -151,6 +140,20 @@ const GatewayDetailPage: React.FC = () => {
               listHref="/connectivity-link/gateways"
               resource={gateway}
               plural="gateways"
+              topItems={
+                <DropdownItem
+                  key="gateway-pods"
+                  icon={<CubeIcon />}
+                  component={(props) => (
+                    <Link
+                      {...props}
+                      to={`/search/ns/${ns}?kind=Pod&q=gateway.networking.k8s.io%2Fgateway-name%3D${encodeURIComponent(name || '')}`}
+                    />
+                  )}
+                >
+                  {t('Gateway pods')}
+                </DropdownItem>
+              }
             />
           </div>
         </div>

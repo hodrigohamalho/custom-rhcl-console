@@ -84,6 +84,12 @@ export interface ResourceActionsMenuProps {
   /** Plural REST name (`httproutes`, `authpolicies`). Required only if
    *  `resource` is passed — the modal needs it for k8sUpdate. */
   plural?: string;
+  /** Extra menu items rendered ABOVE the built-in Edit / Delete
+   *  entries. Consumer's responsibility to render `<DropdownItem>` nodes
+   *  (the component doesn't wrap them). Used by pages like Gateway
+   *  detail to add a "Pods" quick-link without growing another
+   *  standalone button next to the kebab. */
+  topItems?: React.ReactNode;
 }
 
 const ResourceActionsMenu: React.FC<ResourceActionsMenuProps> = ({
@@ -94,6 +100,7 @@ const ResourceActionsMenu: React.FC<ResourceActionsMenuProps> = ({
   displayName,
   resource,
   plural,
+  topItems,
 }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const history = useHistory();
@@ -160,6 +167,7 @@ const ResourceActionsMenu: React.FC<ResourceActionsMenuProps> = ({
         )}
       >
         <DropdownList>
+          {topItems}
           {resource && plural ? (
             <DropdownItem key="edit" onClick={() => setEditing(true)}>
               {t('Edit')}
