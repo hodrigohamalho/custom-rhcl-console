@@ -18,6 +18,7 @@ import {
   EnvironmentHealthCardData,
   HealthSeverity,
 } from '../components/overview/types';
+import { useGatewayPodHealth } from './useGatewayPodHealth';
 
 interface StatusCondition {
   type: string;
@@ -143,6 +144,13 @@ export function useEnvironmentHealth(): Result {
     isList: true,
   });
 
+  // Data-plane view — pod health for the workloads actually serving
+  // each Gateway CR's listeners. Kuadrant's own status only reflects
+  // its controller's happy path; a Programmed Gateway can still be
+  // CrashLoopBackOff on the pod side (mTLS trust bundle out of sync,
+  // wasm-shim rejecting an Envoy field, etc.).
+  const { byGateway: gwPodHealth, loaded: gwPodLoaded } = useGatewayPodHealth();
+
   return React.useMemo<Result>(() => {
     const loaded =
       gwLoaded &&
@@ -152,16 +160,39 @@ export function useEnvironmentHealth(): Result {
       rlpLoaded &&
       trlpLoaded &&
       dnsLoaded &&
-      tlsLoaded;
+      tlsLoaded &&
+      gwPodLoaded;
 
     const gws = gateways || [];
     const rts = routes || [];
     const aps = apiProducts || [];
 
-    // Gateways
-    const gwHealthyCount = gws.filter(gatewayHealthy).length;
+    // Gateways — the Kuadrant CR view says "Programmed + Accepted →
+    // Healthy", the pod-health hook overrides to Critical/Warning when
+    // the underlying pod is misbehaving (crashloop / not ready / recent
+    // BackOff event). A single Critical downgrades the card, so
+    // Overview surfaces the issue even when just one out of N gateways
+    // is unhealthy.
+    const podHealthByKey = new Map<string, 'healthy' | 'warning' | 'critical'>();
+    for (const h of gwPodHealth) {
+      podHealthByKey.set(`${h.gatewayNamespace}/${h.gatewayName}`, h.worstSeverity);
+    }
+    let gwHealthyCount = 0;
+    let gwWarning = 0;
+    let gwCritical = 0;
+    for (const g of gws) {
+      const key = `${g.metadata?.namespace || ''}/${g.metadata?.name || ''}`;
+      const podSeverity = podHealthByKey.get(key);
+      const crHealthy = gatewayHealthy(g);
+      if (podSeverity === 'critical') {
+        gwCritical++;
+      } else if (!crHealthy || podSeverity === 'warning') {
+        gwWarning++;
+      } else {
+        gwHealthyCount++;
+      }
+    }
     const gwTotal = gws.length;
-    const gwWarning = gwTotal - gwHealthyCount;
 
     // HTTPRoutes
     const rtHealthy = rts.filter((r) =>
@@ -240,7 +271,12 @@ export function useEnvironmentHealth(): Result {
         total: gwTotal,
         breakdown: [
           { label: 'Healthy', count: gwHealthyCount, severity: 'healthy' as HealthSeverity },
-          { label: 'Warning', count: gwWarning, severity: 'warning' as HealthSeverity },
+          ...(gwWarning > 0
+            ? [{ label: 'Warning', count: gwWarning, severity: 'warning' as HealthSeverity }]
+            : []),
+          ...(gwCritical > 0
+            ? [{ label: 'Critical', count: gwCritical, severity: 'critical' as HealthSeverity }]
+            : []),
         ],
         href: '/connectivity-link/gateways',
       },
@@ -303,6 +339,7 @@ export function useEnvironmentHealth(): Result {
     trlp,
     dnsP,
     tlsP,
+    gwPodHealth,
     gwLoaded,
     rtLoaded,
     apLoaded,
@@ -311,5 +348,6 @@ export function useEnvironmentHealth(): Result {
     trlpLoaded,
     dnsLoaded,
     tlsLoaded,
+    gwPodLoaded,
   ]);
 }

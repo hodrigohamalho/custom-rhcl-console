@@ -16,6 +16,7 @@ import {
 import { APIKey, getAPIKeyPhase } from '../types';
 import { NeedsAttentionItem } from '../components/overview/types';
 import { usePollingEffect } from './usePollingEffect';
+import { useGatewayPodHealth } from './useGatewayPodHealth';
 
 interface StatusCondition {
   type: string;
@@ -114,6 +115,12 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
     isList: true,
   });
 
+  // Gateway data-plane pod health — restart storms, sustained
+  // not-ready, recent Warning events (BackOff / Unhealthy / Failed).
+  // Complements the Kuadrant CR view (Programmed + Accepted) with the
+  // "is the pod actually serving traffic?" perspective.
+  const { byGateway: gwPodHealth, loaded: gwPodLoaded } = useGatewayPodHealth();
+
   const [gatewayErrors, setGatewayErrors] = React.useState<PerGatewayErrorRate[]>([]);
   const [gwErrorsLoaded, setGwErrorsLoaded] = React.useState(false);
 
@@ -157,7 +164,8 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
       dnsLoaded &&
       tlsLoaded &&
       apiKeysLoaded &&
-      gwErrorsLoaded;
+      gwErrorsLoaded &&
+      gwPodLoaded;
 
     const items: NeedsAttentionItem[] = [];
 
@@ -219,6 +227,60 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
       });
     }
 
+    // Gateway pod-level failures. Each signal (crashloop / not-ready /
+    // recent Warning event) becomes its own item so the operator can
+    // click straight to the affected pod. Grouping by pod within a
+    // single item would hide the fact that a gateway with two crashing
+    // pods and one merely-not-ready pod has TWO problems, not one.
+    for (const h of gwPodHealth) {
+      const gwUrl = `/k8s/ns/${h.gatewayNamespace}/gateway.networking.k8s.io~v1~Gateway/${h.gatewayName}`;
+      for (const s of h.signals) {
+        const podUrl = `/k8s/ns/${s.podNamespace}/pods/${s.podName}`;
+        if (s.kind === 'restart-storm') {
+          items.push({
+            id: `gw-pod-restart-${h.gatewayNamespace}-${h.gatewayName}-${s.podName}`,
+            severity: 'critical',
+            title: `Gateway ${h.gatewayName} pod is crashing (${s.podName})`,
+            detail: s.message,
+            href: podUrl,
+            occurredAt: 'now',
+          });
+        } else if (s.kind === 'not-ready') {
+          items.push({
+            id: `gw-pod-not-ready-${h.gatewayNamespace}-${h.gatewayName}-${s.podName}`,
+            severity: 'warning',
+            title: `Gateway ${h.gatewayName} pod is not Ready (${s.podName})`,
+            detail: s.message,
+            href: podUrl,
+            occurredAt: 'now',
+          });
+        } else if (s.kind === 'recent-warning') {
+          items.push({
+            id: `gw-pod-event-${h.gatewayNamespace}-${h.gatewayName}-${s.podName}-${s.eventReason || 'warn'}`,
+            severity: s.severity,
+            title: `Gateway ${h.gatewayName}: ${s.eventReason || 'Warning'} on ${s.podName}`,
+            detail: s.message,
+            href: podUrl,
+            occurredAt: relativeAgo(s.observedAt) || 'now',
+          });
+        }
+      }
+      // If a gateway has zero pods at all, the CR is deployed but
+      // nothing is serving. Flag it — that's the "Gateway Programmed
+      // but no data plane" case, common after a bad rollout.
+      if (h.podCount === 0) {
+        items.push({
+          id: `gw-no-pods-${h.gatewayNamespace}-${h.gatewayName}`,
+          severity: 'critical',
+          title: `Gateway ${h.gatewayName} has no pods`,
+          detail:
+            'The Gateway CR exists but no pod is running with the matching gateway-name label.',
+          href: gwUrl,
+          occurredAt: 'now',
+        });
+      }
+    }
+
     const pendingApiKeys = (apiKeys || []).filter((k) => getAPIKeyPhase(k) === 'Pending');
     if (pendingApiKeys.length > 0) {
       items.push({
@@ -245,6 +307,7 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
     tlsP,
     apiKeys,
     gatewayErrors,
+    gwPodHealth,
     authLoaded,
     rlpLoaded,
     trlpLoaded,
@@ -252,5 +315,6 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
     tlsLoaded,
     apiKeysLoaded,
     gwErrorsLoaded,
+    gwPodLoaded,
   ]);
 }
