@@ -161,10 +161,40 @@
   ) !important;
 }
 
-/* --------- Tables on cards --------- */
+/* --------- Tables on cards ---------
+ *
+ * PatternFly Tables paint their <Thead> and cells with a "surface"
+ * background that resolves to near-black on the Console's dark theme.
+ * Inside our glass cards this reads as a dark stripe across the top of
+ * every table (Policies, HTTPRoutes, Recent Events, every list page)
+ * — the "fundo escuro feio" complaint. Kill the header + cell surfaces
+ * so tables inherit the card background; keep a thin bottom border on
+ * the header so the header/body separation stays legible.
+ */
+.rhcl-plugin-root .pf-v6-c-table,
+.rhcl-plugin-root .pf-v5-c-table,
+.rhcl-plugin-root .pf-v6-c-table__thead,
+.rhcl-plugin-root .pf-v5-c-table__thead,
+.rhcl-plugin-root .pf-v6-c-table__tbody,
+.rhcl-plugin-root .pf-v5-c-table__tbody,
+.rhcl-plugin-root .pf-v6-c-table__tr,
+.rhcl-plugin-root .pf-v5-c-table__tr,
+.rhcl-plugin-root .pf-v6-c-table__th,
+.rhcl-plugin-root .pf-v5-c-table__th,
+.rhcl-plugin-root .pf-v6-c-table__td,
+.rhcl-plugin-root .pf-v5-c-table__td {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+.rhcl-plugin-root .pf-v6-c-table__thead .pf-v6-c-table__th,
+.rhcl-plugin-root .pf-v5-c-table__thead .pf-v5-c-table__th {
+  border-bottom: 1px solid var(--pf-t--global--border--color--default) !important;
+}
+
 .rhcl-plugin-root .pf-v6-c-table tbody tr:hover,
 .rhcl-plugin-root .pf-v5-c-table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.03) !important;
 }
 
 /* --------- Labels / chips --------- */
