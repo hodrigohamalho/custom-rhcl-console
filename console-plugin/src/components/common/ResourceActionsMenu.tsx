@@ -16,6 +16,19 @@ import { useTranslation } from 'react-i18next';
 import { k8sDelete } from '@openshift-console/dynamic-plugin-sdk';
 
 /**
+ * Pluralize a Kind into its REST resource name the way the API server
+ * does. The naïve `kind.toLowerCase() + 's'` breaks on every Kind
+ * ending in a consonant + 'y' — `TLSPolicy` → `tlspolicys` (404),
+ * when the real plural is `tlspolicies`. English rule: consonant + y →
+ * ies; vowel + y (Gateway, Key) → +s; everything else → +s.
+ */
+function pluralizeKind(kind: string): string {
+  const lower = kind.toLowerCase();
+  if (/[^aeiou]y$/.test(lower)) return `${lower.slice(0, -1)}ies`;
+  return `${lower}s`;
+}
+
+/**
  * Two-action menu (⋮ kebab) attached to any Kubernetes object the
  * plugin surfaces on a detail page:
  *
@@ -90,7 +103,7 @@ const ResourceActionsMenu: React.FC<ResourceActionsMenuProps> = ({
           apiGroup: gvk.group,
           apiVersion: gvk.version,
           kind: gvk.kind,
-          plural: gvk.kind.toLowerCase() + 's', // fine for the resources we hit; SDK also accepts abbreviated
+          plural: pluralizeKind(gvk.kind),
         } as never,
         resource: {
           apiVersion: gvk.group ? `${gvk.group}/${gvk.version}` : gvk.version,

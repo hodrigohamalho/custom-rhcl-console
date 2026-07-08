@@ -98,8 +98,10 @@
       "APIKeysListPage": "./components/api-keys/APIKeysListPage",
       "PlansListPage": "./components/plans/PlansListPage",
       "CostMonitoringPage": "./components/cost/CostMonitoringPage",
+      "CreateApiWizard": "./components/wizard/CreateApiWizard",
       "DeveloperPortalRedirect": "./components/developer-portal/DeveloperPortalRedirect",
-      "developerPortalFlag": "./feature-flags/developerPortalFlag"
+      "developerPortalFlag": "./feature-flags/developerPortalFlag",
+      "GRPCRouteListPage": "./components/grpcroutes/GRPCRouteListPage"
     },
     "dependencies": {
       "@console/pluginAPI": ">=4.19.0-0"

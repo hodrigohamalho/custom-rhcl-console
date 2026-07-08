@@ -42,12 +42,23 @@
   {
     "type": "console.navigation/href",
     "properties": {
+      "id": "connectivity-link-grpcroutes",
+      "name": "%plugin__custom-rhcl-console~GRPCRoutes%",
+      "href": "/connectivity-link/grpcroutes",
+      "perspective": "admin",
+      "section": "connectivity-link",
+      "insertAfter": "connectivity-link-httproutes"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
       "id": "connectivity-link-policies",
       "name": "%plugin__custom-rhcl-console~Policies%",
       "href": "/connectivity-link/policies",
       "perspective": "admin",
       "section": "connectivity-link",
-      "insertAfter": "connectivity-link-httproutes"
+      "insertAfter": "connectivity-link-grpcroutes"
     }
   },
   {
@@ -108,13 +119,17 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/cost",
-      "component": { "$codeRef": "CostMonitoringPage" }
+      "component": {
+        "$codeRef": "CostMonitoringPage"
+      }
     }
   },
   {
     "type": "console.flag/hookProvider",
     "properties": {
-      "handler": { "$codeRef": "developerPortalFlag.useDeveloperPortalFlag" }
+      "handler": {
+        "$codeRef": "developerPortalFlag.useDeveloperPortalFlag"
+      }
     }
   },
   {
@@ -128,7 +143,9 @@
       "insertAfter": "connectivity-link-apikeys"
     },
     "flags": {
-      "required": ["DEVELOPER_PORTAL_URL_PRESENT"]
+      "required": [
+        "DEVELOPER_PORTAL_URL_PRESENT"
+      ]
     }
   },
   {
@@ -136,10 +153,14 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/developer-portal",
-      "component": { "$codeRef": "DeveloperPortalRedirect" }
+      "component": {
+        "$codeRef": "DeveloperPortalRedirect"
+      }
     },
     "flags": {
-      "required": ["DEVELOPER_PORTAL_URL_PRESENT"]
+      "required": [
+        "DEVELOPER_PORTAL_URL_PRESENT"
+      ]
     }
   },
   {
@@ -147,7 +168,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/plans",
-      "component": { "$codeRef": "PlansListPage" }
+      "component": {
+        "$codeRef": "PlansListPage"
+      }
     }
   },
   {
@@ -155,7 +178,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/apikeys",
-      "component": { "$codeRef": "APIKeysListPage" }
+      "component": {
+        "$codeRef": "APIKeysListPage"
+      }
     }
   },
   {
@@ -163,7 +188,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link",
-      "component": { "$codeRef": "OverviewPage" }
+      "component": {
+        "$codeRef": "OverviewPage"
+      }
     }
   },
   {
@@ -171,14 +198,18 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/gateways",
-      "component": { "$codeRef": "GatewayListPage" }
+      "component": {
+        "$codeRef": "GatewayListPage"
+      }
     }
   },
   {
     "type": "console.page/route",
     "properties": {
       "path": "/connectivity-link/gateways/:ns/:name",
-      "component": { "$codeRef": "GatewayDetailPage" }
+      "component": {
+        "$codeRef": "GatewayDetailPage"
+      }
     }
   },
   {
@@ -186,14 +217,18 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/httproutes",
-      "component": { "$codeRef": "HTTPRouteListPage" }
+      "component": {
+        "$codeRef": "HTTPRouteListPage"
+      }
     }
   },
   {
     "type": "console.page/route",
     "properties": {
       "path": "/connectivity-link/httproutes/:ns/:name",
-      "component": { "$codeRef": "HTTPRouteDetailPage" }
+      "component": {
+        "$codeRef": "HTTPRouteDetailPage"
+      }
     }
   },
   {
@@ -201,7 +236,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/policies",
-      "component": { "$codeRef": "PolicyListPage" }
+      "component": {
+        "$codeRef": "PolicyListPage"
+      }
     }
   },
   {
@@ -209,7 +246,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/policies/ratelimit/:ns/:name",
-      "component": { "$codeRef": "RateLimitPolicyDetailPage" }
+      "component": {
+        "$codeRef": "RateLimitPolicyDetailPage"
+      }
     }
   },
   {
@@ -217,7 +256,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/policies/auth/:ns/:name",
-      "component": { "$codeRef": "AuthPolicyDetailPage" }
+      "component": {
+        "$codeRef": "AuthPolicyDetailPage"
+      }
     }
   },
   {
@@ -225,7 +266,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/policies/tokenratelimit/:ns/:name",
-      "component": { "$codeRef": "TokenRateLimitPolicyDetailPage" }
+      "component": {
+        "$codeRef": "TokenRateLimitPolicyDetailPage"
+      }
     }
   },
   {
@@ -233,7 +276,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/policies/dns/:ns/:name",
-      "component": { "$codeRef": "DNSPolicyDetailPage" }
+      "component": {
+        "$codeRef": "DNSPolicyDetailPage"
+      }
     }
   },
   {
@@ -241,7 +286,9 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/policies/tls/:ns/:name",
-      "component": { "$codeRef": "TLSPolicyDetailPage" }
+      "component": {
+        "$codeRef": "TLSPolicyDetailPage"
+      }
     }
   },
   {
@@ -249,14 +296,38 @@
     "properties": {
       "exact": true,
       "path": "/connectivity-link/api-products",
-      "component": { "$codeRef": "APIProductListPage" }
+      "component": {
+        "$codeRef": "APIProductListPage"
+      }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/connectivity-link/create-api",
+      "component": {
+        "$codeRef": "CreateApiWizard"
+      }
     }
   },
   {
     "type": "console.page/route",
     "properties": {
       "path": "/connectivity-link/api-products/:ns/:name",
-      "component": { "$codeRef": "APIOverviewPage" }
+      "component": {
+        "$codeRef": "APIOverviewPage"
+      }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/connectivity-link/grpcroutes",
+      "component": {
+        "$codeRef": "GRPCRouteListPage"
+      }
     }
   }
 ]

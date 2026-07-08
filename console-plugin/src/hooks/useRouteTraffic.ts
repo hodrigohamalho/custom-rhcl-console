@@ -237,7 +237,7 @@ export function useRouteTraffic(): UseRouteTrafficResult {
         errorRatePct: Math.round(stats.errorPct * 10) / 10,
         policiesCount: policyCountFor(ns, name),
         sparkline: stats.sparkline,
-        href: `/k8s/ns/${ns}/gateway.networking.k8s.io~v1~HTTPRoute/${name}`,
+        href: `/connectivity-link/httproutes/${ns}/${name}`,
       };
     });
 

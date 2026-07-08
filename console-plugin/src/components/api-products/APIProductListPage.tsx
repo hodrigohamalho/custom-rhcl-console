@@ -9,7 +9,9 @@ import {
   Bullseye,
   Label,
   Tooltip,
+  Button,
 } from '@patternfly/react-core';
+import { PlusCircleIcon } from '@patternfly/react-icons';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useTranslation } from 'react-i18next';
 import { useResourceWithRBAC } from '../../hooks/useResourceWithRBAC';
@@ -93,7 +95,17 @@ const APIProductListPage: React.FC = () => {
   return (
     <div className="rhcl-plugin-root">
       <PageSection variant="default">
-        <Title headingLevel="h1">{t('API Products')}</Title>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title headingLevel="h1">{t('API Products')}</Title>
+          {/* Primary outcome-oriented CTA — the guided wizard is the
+              default path; per-resource creation stays available on
+              each resource's own list page for advanced users. */}
+          <Link to="/connectivity-link/create-api">
+            <Button variant="primary" icon={<PlusCircleIcon />}>
+              {t('Create API')}
+            </Button>
+          </Link>
+        </div>
       </PageSection>
       <PageSection>
         <FilterToolbar

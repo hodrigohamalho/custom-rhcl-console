@@ -175,3 +175,9 @@ export function policyResourceURL(policyKind: string, namespace: string, name: s
   if (!gvk) return '#';
   return `/k8s/ns/${namespace}/${gvk.group}~${gvk.version}~${gvk.kind}/${name}`;
 }
+
+export const GRPCRouteGVK: K8sGroupVersionKind = {
+  group: 'gateway.networking.k8s.io',
+  version: 'v1',
+  kind: 'GRPCRoute',
+};

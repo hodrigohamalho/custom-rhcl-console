@@ -266,7 +266,22 @@ const PlanDetails: React.FC<{
         })}
       </Grid>
       <ExpandableSection toggleText={t('Status conditions')} style={{ marginTop: 12 }}>
-        <pre style={{ fontSize: 12, background: 'var(--pf-t--global--color--nonstatus--gray--100)', padding: 8 }}>
+        {/* `nonstatus--gray--100` is a near-WHITE token — as a <pre>
+            background on the dark Console theme it rendered a light slab
+            with the theme's light text on top = unreadable. Use the
+            secondary surface + regular text token so it reads in both
+            themes. */}
+        <pre
+          style={{
+            fontSize: 12,
+            background: 'var(--pf-t--global--background--color--secondary--default)',
+            color: 'var(--pf-t--global--text--color--regular)',
+            border: '1px solid var(--pf-t--global--border--color--default)',
+            borderRadius: 6,
+            padding: 10,
+            overflowX: 'auto',
+          }}
+        >
           {JSON.stringify(policy.status?.conditions || [], null, 2)}
         </pre>
       </ExpandableSection>
