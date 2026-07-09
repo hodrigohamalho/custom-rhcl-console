@@ -165,7 +165,20 @@ const OverviewPage: React.FC = () => {
                   <DropdownList>
                     {createActions.map((a) =>
                       a.kind === 'wizard' ? (
-                        <DropdownItem key={a.id} component={Link} to={a.href}>
+                        // Render prop, not `component={Link}` — PatternFly's
+                        // DropdownItem forwards `href` to whatever it
+                        // renders, but react-router-dom's Link expects
+                        // `to`. Passing Link as `component` prop drops us
+                        // back onto a plain <a href> full-navigation path.
+                        // Wrapping via a render prop that explicitly maps
+                        // `href` (from PF) to `to` (from Link) keeps the
+                        // click inside the SPA — matches the pattern the
+                        // "Gateway pods" quick-link on GatewayDetailPage
+                        // and the "View all" links on Overview cards use.
+                        <DropdownItem
+                          key={a.id}
+                          component={(props) => <Link {...props} to={a.href} />}
+                        >
                           {a.label}
                         </DropdownItem>
                       ) : (

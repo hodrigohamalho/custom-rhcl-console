@@ -648,88 +648,99 @@ export const SecurityStep: React.FC<{ state: WizardState; patch: Patch }> = ({ s
       title="How should consumers authenticate?"
       what="This generates an AuthPolicy enforced at the gateway — your backend never sees unauthenticated traffic."
     />
-    <div className="rhcl-wiz-auth-grid">
-      {AUTH_CARDS.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          className={`rhcl-wiz-auth-card${state.authMode === c.id ? ' is-selected' : ''}`}
-          onClick={() => patch({ authMode: c.id })}
-        >
-          <div className="rhcl-wiz-auth-title">{c.title}</div>
-          <div className="rhcl-wiz-auth-desc">{c.desc}</div>
-        </button>
-      ))}
-    </div>
+    {/* Two-col matches the Backend / Gateway / Review pattern so the
+        arch diagram anchors the operator's mental model on every
+        substantive step — the customer read this as inconsistent when
+        Security dropped it. Everything on the left continues to look
+        the same; the ArchDiagram picks up `authMode` so the "auth"
+        surface lights up as the operator makes the choice. */}
+    <div className="rhcl-wiz-two-col">
+      <div>
+        <div className="rhcl-wiz-auth-grid">
+          {AUTH_CARDS.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              className={`rhcl-wiz-auth-card${state.authMode === c.id ? ' is-selected' : ''}`}
+              onClick={() => patch({ authMode: c.id })}
+            >
+              <div className="rhcl-wiz-auth-title">{c.title}</div>
+              <div className="rhcl-wiz-auth-desc">{c.desc}</div>
+            </button>
+          ))}
+        </div>
 
-    {state.authMode === 'api-key' && (
-      <div className="rhcl-wiz-auth-config">
-        <Field label="Header name" hint="Consumers send their key in this HTTP header.">
-          <input
-            className="rhcl-wiz-input"
-            value={state.apiKeyHeader}
-            onChange={(e) => patch({ apiKeyHeader: e.target.value })}
-          />
-        </Field>
+        {state.authMode === 'api-key' && (
+          <div className="rhcl-wiz-auth-config">
+            <Field label="Header name" hint="Consumers send their key in this HTTP header.">
+              <input
+                className="rhcl-wiz-input"
+                value={state.apiKeyHeader}
+                onChange={(e) => patch({ apiKeyHeader: e.target.value })}
+              />
+            </Field>
+          </div>
+        )}
+        {state.authMode === 'jwt' && (
+          <div className="rhcl-wiz-auth-config">
+            <Field label="Issuer URL" hint="The iss claim your IdP stamps into tokens.">
+              <input
+                className="rhcl-wiz-input"
+                value={state.jwtIssuer}
+                placeholder="https://keycloak.example.com/realms/prod"
+                onChange={(e) => patch({ jwtIssuer: e.target.value })}
+              />
+            </Field>
+            <Field label="Audience (optional)">
+              <input
+                className="rhcl-wiz-input"
+                value={state.jwtAudience}
+                onChange={(e) => patch({ jwtAudience: e.target.value })}
+              />
+            </Field>
+            <Field label="JWKS URL (optional)" hint="Defaults to the issuer's well-known JWKS endpoint.">
+              <input
+                className="rhcl-wiz-input"
+                value={state.jwksUrl}
+                onChange={(e) => patch({ jwksUrl: e.target.value })}
+              />
+            </Field>
+          </div>
+        )}
+        {state.authMode === 'oidc' && (
+          <div className="rhcl-wiz-auth-config">
+            <Field label="Discovery URL">
+              <input
+                className="rhcl-wiz-input"
+                value={state.oidcDiscoveryUrl}
+                placeholder="https://idp.example.com/.well-known/openid-configuration"
+                onChange={(e) => patch({ oidcDiscoveryUrl: e.target.value })}
+              />
+            </Field>
+            <Field label="Client ID">
+              <input
+                className="rhcl-wiz-input"
+                value={state.oidcClientId}
+                onChange={(e) => patch({ oidcClientId: e.target.value })}
+              />
+            </Field>
+            <Field label="Scopes">
+              <input
+                className="rhcl-wiz-input"
+                value={state.oidcScopes}
+                onChange={(e) => patch({ oidcScopes: e.target.value })}
+              />
+            </Field>
+          </div>
+        )}
+        {state.authMode === 'anonymous' && (
+          <div className="rhcl-wiz-validation warn">
+            Anyone on the network can call this API. Pick API Key or JWT if the data isn't public.
+          </div>
+        )}
       </div>
-    )}
-    {state.authMode === 'jwt' && (
-      <div className="rhcl-wiz-auth-config">
-        <Field label="Issuer URL" hint="The iss claim your IdP stamps into tokens.">
-          <input
-            className="rhcl-wiz-input"
-            value={state.jwtIssuer}
-            placeholder="https://keycloak.example.com/realms/prod"
-            onChange={(e) => patch({ jwtIssuer: e.target.value })}
-          />
-        </Field>
-        <Field label="Audience (optional)">
-          <input
-            className="rhcl-wiz-input"
-            value={state.jwtAudience}
-            onChange={(e) => patch({ jwtAudience: e.target.value })}
-          />
-        </Field>
-        <Field label="JWKS URL (optional)" hint="Defaults to the issuer's well-known JWKS endpoint.">
-          <input
-            className="rhcl-wiz-input"
-            value={state.jwksUrl}
-            onChange={(e) => patch({ jwksUrl: e.target.value })}
-          />
-        </Field>
-      </div>
-    )}
-    {state.authMode === 'oidc' && (
-      <div className="rhcl-wiz-auth-config">
-        <Field label="Discovery URL">
-          <input
-            className="rhcl-wiz-input"
-            value={state.oidcDiscoveryUrl}
-            placeholder="https://idp.example.com/.well-known/openid-configuration"
-            onChange={(e) => patch({ oidcDiscoveryUrl: e.target.value })}
-          />
-        </Field>
-        <Field label="Client ID">
-          <input
-            className="rhcl-wiz-input"
-            value={state.oidcClientId}
-            onChange={(e) => patch({ oidcClientId: e.target.value })}
-          />
-        </Field>
-        <Field label="Scopes">
-          <input
-            className="rhcl-wiz-input"
-            value={state.oidcScopes}
-            onChange={(e) => patch({ oidcScopes: e.target.value })}
-          />
-        </Field>
-      </div>
-    )}
-    {state.authMode === 'anonymous' && (
-      <div className="rhcl-wiz-validation warn">
-        Anyone on the network can call this API. Pick API Key or JWT if the data isn't public.
-      </div>
-    )}
+      <ArchDiagram state={state} />
+    </div>
   </>
 );
 
