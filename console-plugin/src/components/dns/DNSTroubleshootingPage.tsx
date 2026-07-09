@@ -8,15 +8,21 @@ import {
   Spinner,
   Bullseye,
   Label,
+  EmptyState,
+  EmptyStateBody,
+  EmptyStateActions,
+  EmptyStateFooter,
 } from '@patternfly/react-core';
 import {
   SyncAltIcon,
   PlayIcon,
+  PlusCircleIcon,
   CheckCircleIcon,
   ExclamationCircleIcon,
   ClockIcon,
   MinusCircleIcon,
   ExclamationTriangleIcon,
+  GlobeIcon,
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
 import { useDnsTroubleshooting } from './useDnsTroubleshooting';
@@ -25,6 +31,10 @@ import DNSDiagnosisPanel from './DNSDiagnosisPanel';
 import DNSTimeline from './DNSTimeline';
 import DNSDiagnosticsTable from './DNSDiagnosticsTable';
 import DNSResolverTable from './DNSResolverTable';
+import DNSAdvancedSection from './DNSAdvancedSection';
+import ResourceEditorModal from '../common/ResourceEditorModal';
+import { starterFor } from '../common/starterTemplates';
+import { DNSPolicyGVK } from '../../models';
 import { STATUS_META } from './types';
 import '../../styles/plugin-glass.css';
 import './dns-troubleshooting.css';
@@ -53,8 +63,21 @@ const DNSTroubleshootingPage: React.FC = () => {
   // is largely cosmetic — but reading it in a key forces a synthesised
   // resolver table refresh so the "last checked" timestamps advance.
   const [tickKey, setTickKey] = React.useState(0);
+  const [createOpen, setCreateOpen] = React.useState(false);
 
   const flow = useDnsTroubleshooting(selectedHostname);
+
+  // Starter YAML for the Create DNSPolicy empty-state CTA — pre-fills
+  // `spec.targetRef.name` with the Gateway we already know needs the
+  // policy, so the operator only has to fill in the provider Secret.
+  const createStarter = React.useMemo(() => {
+    const { template, yaml } = starterFor('DNSPolicy', flow.targetGateway?.namespace || 'openshift-ingress');
+    if (!flow.targetGateway) return { template, yaml };
+    // Rewrite the placeholder `<gateway-name>` in the starter so the
+    // operator's target gateway appears there.
+    const patched = yaml.replace(/<gateway-name>/g, flow.targetGateway.name);
+    return { template, yaml: patched };
+  }, [flow.targetGateway]);
 
   if (flow.loading) {
     return (
@@ -67,6 +90,57 @@ const DNSTroubleshootingPage: React.FC = () => {
             <Spinner size="xl" />
           </Bullseye>
         </PageSection>
+      </div>
+    );
+  }
+
+  // Empty-state short-circuit: a Gateway advertises a hostname but no
+  // DNSPolicy is claiming it. Rendering the full pipeline in that case
+  // would just paint six "Not configured" cards — worse than useless.
+  // Show a proper CTA that opens the Create DNSPolicy modal with the
+  // known target Gateway pre-filled so the operator's first click
+  // matters.
+  if (flow.needsDnsPolicy) {
+    return (
+      <div className="rhcl-plugin-root rhcl-dns-page">
+        <PageSection variant="default">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Title headingLevel="h1">{t('DNS Troubleshooting')}</Title>
+            <Label color="blue" isCompact>BETA</Label>
+          </div>
+        </PageSection>
+        <PageSection isFilled>
+          <Bullseye>
+            <EmptyState
+              titleText={t('No DNSPolicy for this Gateway')}
+              headingLevel="h2"
+              icon={GlobeIcon}
+            >
+              <EmptyStateBody>
+                {t(
+                  'Your Gateway "{{gw}}" advertises hostnames, but no DNSPolicy is publishing records for them. Create one to start managed DNS and unlock the full troubleshooting flow.',
+                  { gw: flow.targetGateway?.name || 'unknown' },
+                )}
+              </EmptyStateBody>
+              <EmptyStateFooter>
+                <EmptyStateActions>
+                  <Button variant="primary" icon={<PlusCircleIcon />} onClick={() => setCreateOpen(true)}>
+                    {t('Create DNSPolicy')}
+                  </Button>
+                </EmptyStateActions>
+              </EmptyStateFooter>
+            </EmptyState>
+          </Bullseye>
+        </PageSection>
+        <ResourceEditorModal
+          isOpen={createOpen}
+          mode="create"
+          gvk={DNSPolicyGVK}
+          plural="dnspolicies"
+          starterYaml={createStarter.yaml}
+          hint={createStarter.template.hint}
+          onClose={() => setCreateOpen(false)}
+        />
       </div>
     );
   }
@@ -207,6 +281,10 @@ const DNSTroubleshootingPage: React.FC = () => {
 
       <PageSection>
         <DNSResolverTable resolvers={flow.resolvers} />
+      </PageSection>
+
+      <PageSection>
+        <DNSAdvancedSection objects={flow.rawObjects} />
       </PageSection>
     </div>
   );

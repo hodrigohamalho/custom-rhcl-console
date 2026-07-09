@@ -130,4 +130,32 @@ export interface DnsFlow {
    *  panel reads from this. Null when everything is healthy or nothing
    *  is configured yet. */
   primaryFailure: DnsStep | null;
+  /**
+   * True when the cluster has at least one Gateway advertising a
+   * hostname but no DNSPolicy claims it. The page renders an
+   * empty-state CTA in that case — the flow itself isn't broken,
+   * there's just nothing to troubleshoot until the operator creates a
+   * DNSPolicy.
+   */
+  needsDnsPolicy: boolean;
+  /** The Gateway that needs a DNSPolicy — surfaced so the empty-state
+   *  CTA can pre-fill `targetRef.name` on the Create modal. */
+  targetGateway: { name: string; namespace: string } | null;
+  /** Raw pipeline CRs — Advanced section reads status.conditions[]
+   *  off these. Kept as untyped objects so the Advanced component
+   *  doesn't need to grow its own CR type imports. */
+  rawObjects: Array<{
+    kind: string;
+    group?: string;
+    version: string;
+    name?: string;
+    namespace?: string;
+    conditions?: Array<{
+      type?: string;
+      status?: string;
+      reason?: string;
+      message?: string;
+      lastTransitionTime?: string;
+    }>;
+  }>;
 }

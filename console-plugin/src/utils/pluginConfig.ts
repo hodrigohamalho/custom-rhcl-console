@@ -26,6 +26,13 @@
  *     # "Developer Portal" item appears in the plugin's sidebar that
  *     # opens the URL directly. Leave unset to hide the item entirely.
  *     developerPortalUrl: https://developer-portal.bb.com.br
+ *     # req029 — Absolute URL of the customer's Red Hat Developer Hub
+ *     # (Internal Developer Portal / Backstage). When set, an "Internal
+ *     # Developer Hub" item appears in the sidebar linking to it. Same
+ *     # opt-in behaviour as developerPortalUrl: unset ⇒ item hidden.
+ *     # Point it at a customer-run RHDH when they already have one, or
+ *     # at the instance the lab's developer_hub role provisions.
+ *     internalDeveloperHubUrl: https://developer-hub.bb.com.br
  *     # req018 — Cost Monitoring.
  *     # `costCurrency` is shown next to monetary values. Leave unset to
  *     # default to "BRL". `costPricing` is a JSON-encoded record of tier
@@ -60,6 +67,10 @@ export interface PluginConfig {
   tempoGatewayRouteName?: string;
   tempoStackName?: string;
   developerPortalUrl?: string;
+  // req029 — Absolute URL of the customer's Red Hat Developer Hub
+  // (Internal Developer Portal). Drives the conditional "Internal
+  // Developer Hub" sidebar item, same opt-in shape as developerPortalUrl.
+  internalDeveloperHubUrl?: string;
   // req018 — Cost Monitoring.
   costCurrency?: string;
   // JSON-encoded record<tierName, {tokens_per_1k, calls_per_1k}>.

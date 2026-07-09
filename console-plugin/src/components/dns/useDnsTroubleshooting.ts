@@ -5,6 +5,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import {
   DNSPolicyGVK,
+  DNSRecordGVK,
   GatewayGVK,
   HTTPRouteGVK,
 } from '../../models';
@@ -95,6 +96,33 @@ interface EventResource extends K8sResourceCommon {
   eventTime?: string;
   lastTimestamp?: string;
   involvedObject?: { kind?: string; name?: string; namespace?: string };
+}
+
+interface DNSRecordResource extends K8sResourceCommon {
+  spec?: {
+    /** The hostname this record covers — Kuadrant reuses the Gateway
+     *  listener hostname here so matching by string is exact. */
+    rootHost?: string;
+    endpoints?: Array<{
+      dnsName?: string;
+      recordType?: string;
+      targets?: string[];
+      recordTTL?: number;
+    }>;
+  };
+  status?: {
+    conditions?: Array<{
+      type?: string;
+      status?: string;
+      reason?: string;
+      message?: string;
+      lastTransitionTime?: string;
+    }>;
+    /** When the provider last acknowledged the record. */
+    queuedAt?: string;
+    /** Ownership tag Kuadrant stamps for multi-owner shared zones. */
+    ownerID?: string;
+  };
 }
 
 function conditionStatus(
@@ -235,9 +263,13 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
     groupVersionKind: { version: 'v1', kind: 'Event' },
     isList: true,
   });
+  const [dnsRecords, dnsRecordsLoaded] = useK8sWatchResource<DNSRecordResource[]>({
+    groupVersionKind: DNSRecordGVK,
+    isList: true,
+  });
 
   return React.useMemo<DnsFlow>(() => {
-    const loading = !dnsPoliciesLoaded || !gatewaysLoaded || !routesLoaded || !eventsLoaded;
+    const loading = !dnsPoliciesLoaded || !gatewaysLoaded || !routesLoaded || !eventsLoaded || !dnsRecordsLoaded;
 
     // Every listener hostname across every Gateway becomes an option.
     // Ignore wildcards ("*.foo.bar") from the dropdown — those are
@@ -371,8 +403,21 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
     };
 
     // ------- PROVIDER step -------
+    // Prefer real DNSRecord CR state over inferring from DNSPolicy
+    // conditions — DNSRecord.Ready == True is the authoritative signal
+    // that the provider (Route 53 / CloudDNS / Azure DNS) acknowledged
+    // the write. Falls back to the DNSPolicy inference when no matching
+    // DNSRecord exists (older Kuadrant, or the operator picked a
+    // hostname that no policy is publishing for).
     const providerRefName = dnsPolicy?.spec?.providerRefs?.[0]?.name;
     const providerInfo = inferProvider(providerRefName);
+    const matchingRecord = (dnsRecords || []).find(
+      (r) =>
+        r.spec?.rootHost === hostname ||
+        (r.spec?.endpoints || []).some((e) => e.dnsName === hostname),
+    );
+    const recordReady = conditionStatus(matchingRecord?.status?.conditions, 'Ready');
+    const endpointCount = matchingRecord?.spec?.endpoints?.length ?? 0;
     const providerStep: DnsStep = {
       id: 'provider',
       title: 'DNS Provider',
@@ -381,6 +426,12 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
         ? 'skipped'
         : !providerRefName
         ? 'failing'
+        : matchingRecord
+        ? recordReady?.ok
+          ? 'healthy'
+          : recordReady?.ok === false
+          ? 'failing'
+          : 'pending'
         : dnsPolicyEnforced?.ok
         ? 'healthy'
         : 'pending',
@@ -388,6 +439,12 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
         ? 'Skipped — no DNSPolicy is configured.'
         : !providerRefName
         ? 'DNSPolicy has no providerRefs — records will not be created.'
+        : matchingRecord
+        ? recordReady?.ok
+          ? recordReady.message || 'Provider ensured the DNS record.'
+          : recordReady?.ok === false
+          ? `Provider rejected the record: ${recordReady.message || 'unknown reason'}`
+          : 'DNSRecord created; waiting for the provider to acknowledge.'
         : dnsPolicyEnforced?.ok
         ? 'Records synced to provider.'
         : 'Waiting for the provider to acknowledge the records.',
@@ -396,30 +453,54 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
             { label: 'Provider', value: providerInfo.label },
             { label: 'Secret', value: providerRefName || '(none)', muted: !providerRefName },
             { label: 'Hosted zone', value: hostname.split('.').slice(-2).join('.') || 'unknown' },
+            {
+              label: 'DNSRecord',
+              value: matchingRecord?.metadata?.name || '(not created yet)',
+              muted: !matchingRecord,
+            },
+            {
+              label: 'Endpoints',
+              value: matchingRecord ? String(endpointCount) : '—',
+              muted: !matchingRecord,
+            },
           ]
         : [],
+      href: matchingRecord
+        ? `/k8s/ns/${matchingRecord.metadata?.namespace}/kuadrant.io~v1alpha1~DNSRecord/${matchingRecord.metadata?.name}`
+        : undefined,
     };
 
     // ------- PUBLIC DNS step -------
-    // This is the placeholder + honest disclaimer. The real prober lives
-    // server-side; the derived status here just tracks the DNSPolicy
-    // enforcement state so the badge isn't obviously wrong.
+    // Cluster-side we know when the record was written (matchingRecord
+    // exists + Ready). Public propagation itself still can't be probed
+    // from the browser — the real prober lives server-side and will
+    // fill the resolver table when connected. Until then this step
+    // tracks the record-write status: "healthy" once the provider
+    // Ready'd, otherwise pending/skipped.
     const publicDnsStep: DnsStep = {
       id: 'public-dns',
       title: 'Public DNS',
       resourceName: 'Public resolvers',
       status: !dnsPolicy
         ? 'skipped'
+        : matchingRecord && recordReady?.ok
+        ? 'pending' // record written — propagation racy, page defaults to "still spreading"
+        : matchingRecord
+        ? 'pending'
         : dnsPolicyEnforced?.ok
-        ? 'pending' // records exist; propagation is racy — page defaults to "still spreading" until the operator confirms.
+        ? 'pending'
         : 'not-configured',
       summary: !dnsPolicy
         ? 'Skipped — no records to propagate.'
+        : matchingRecord && recordReady?.ok
+        ? 'Record acknowledged by provider. Cross-resolver checks below approximate propagation.'
+        : matchingRecord
+        ? 'DNSRecord exists; waiting for provider before public resolvers see it.'
         : dnsPolicyEnforced?.ok
         ? 'Records were sent to the provider. Cross-resolver checks below approximate propagation.'
         : 'Records not yet written.',
       details: [
-        { label: 'Cross-resolver estimation', value: '8 resolvers sampled', muted: true },
+        { label: 'Sampled resolvers', value: '8', muted: true },
         { label: 'Live probing', value: 'requires backend prober', muted: true },
       ],
     };
@@ -610,6 +691,47 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
 
     const resolvers = synthResolvers(hostname, publicDnsStep.status);
 
+    const needsDnsPolicy =
+      hostnameOptions.length > 0 && gateway !== null && dnsPolicy === null;
+
+    const rawObjects: DnsFlow['rawObjects'] = [
+      {
+        kind: 'DNSPolicy',
+        group: 'kuadrant.io',
+        version: 'v1',
+        name: dnsPolicy?.metadata?.name,
+        namespace: dnsPolicy?.metadata?.namespace,
+        conditions: dnsPolicy?.status?.conditions,
+      },
+      {
+        kind: 'Gateway',
+        group: 'gateway.networking.k8s.io',
+        version: 'v1',
+        name: gateway?.metadata?.name,
+        namespace: gateway?.metadata?.namespace,
+        conditions: gateway?.status?.conditions,
+      },
+      {
+        kind: 'HTTPRoute',
+        group: 'gateway.networking.k8s.io',
+        version: 'v1',
+        name: httpRoute?.metadata?.name,
+        namespace: httpRoute?.metadata?.namespace,
+        // Flatten status.parents[*].conditions since Advanced doesn't
+        // need to know about the parent nesting — the first parent's
+        // conditions are what the flow cards used.
+        conditions: httpRoute?.status?.parents?.[0]?.conditions,
+      },
+      {
+        kind: 'DNSRecord',
+        group: 'kuadrant.io',
+        version: 'v1alpha1',
+        name: matchingRecord?.metadata?.name,
+        namespace: matchingRecord?.metadata?.namespace,
+        conditions: matchingRecord?.status?.conditions,
+      },
+    ];
+
     return {
       hostname,
       hostnameOptions,
@@ -620,6 +742,9 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
       resolvers,
       loading,
       primaryFailure,
+      needsDnsPolicy,
+      targetGateway: gateway ? { name: gatewayName, namespace: gatewayNs } : null,
+      rawObjects,
     };
   }, [
     dnsPolicies,
@@ -630,6 +755,8 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
     routesLoaded,
     events,
     eventsLoaded,
+    dnsRecords,
+    dnsRecordsLoaded,
     selectedHostname,
   ]);
 }

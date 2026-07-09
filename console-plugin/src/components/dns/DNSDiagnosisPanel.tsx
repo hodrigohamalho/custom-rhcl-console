@@ -15,6 +15,7 @@ import {
   ClockIcon,
 } from '@patternfly/react-icons';
 import { DnsFlow, DnsStep } from './types';
+import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 
 /**
  * "What's wrong and what should I do about it" — the diagnosis card.
@@ -250,6 +251,42 @@ const DNSDiagnosisPanel: React.FC<Props> = ({ flow }) => {
         <Content style={{ marginTop: 12 }}>
           <h4 style={{ margin: '0 0 4px', fontSize: 13, fontWeight: 600 }}>External tools</h4>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {/*
+              Grafana + Prometheus deep-links: the api-overview dashboard
+              is the closest thing we ship to "DNS observability" —
+              request rate + gateway upstream errors surface DNS+TLS
+              handshake issues indirectly. Not perfect, but useful when
+              the operator wants to correlate a propagation window with
+              real traffic. OpenInGrafanaButton falls back to a disabled
+              tooltip when Grafana isn't installed, so we don't have to
+              guard here.
+            */}
+            <OpenInGrafanaButton
+              dashboard="api-overview"
+              label="Gateway metrics"
+              variant="link"
+              isInline
+            />
+            {/*
+              Prometheus deep-link goes to Console's native metrics
+              browser. `histio_request_duration_milliseconds_bucket` is
+              the closest we have to "gateway latency"; the URL takes a
+              PromQL query and shows a graph.
+            */}
+            <Button
+              variant="link"
+              isInline
+              component="a"
+              href={`/monitoring/query-browser?query=${encodeURIComponent(
+                `sum by (le) (rate(istio_request_duration_milliseconds_bucket{destination_service_namespace="openshift-ingress"}[5m]))`,
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              icon={<ExternalLinkAltIcon />}
+              iconPosition="right"
+            >
+              Prometheus
+            </Button>
             <Button
               variant="link"
               isInline
