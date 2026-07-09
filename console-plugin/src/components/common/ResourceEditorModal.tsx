@@ -23,6 +23,28 @@ import { useHistory } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AuthPolicyForm from './forms/AuthPolicyForm';
 import RateLimitPolicyForm from './forms/RateLimitPolicyForm';
+import TokenRateLimitPolicyForm from './forms/TokenRateLimitPolicyForm';
+import DNSPolicyForm from './forms/DNSPolicyForm';
+import TLSPolicyForm from './forms/TLSPolicyForm';
+import GatewayForm from './forms/GatewayForm';
+import HTTPRouteForm from './forms/HTTPRouteForm';
+import GRPCRouteForm from './forms/GRPCRouteForm';
+
+/**
+ * Every Kind we currently render a guided form for. The tab defaults to
+ * 'form' when a Kind lives in this map and 'yaml' otherwise. Adding a
+ * new form is: import the component + add the entry.
+ */
+const FORMS_BY_KIND: Record<string, React.FC<{ yaml: string; onChange: (yaml: string) => void }>> = {
+  AuthPolicy: AuthPolicyForm,
+  RateLimitPolicy: RateLimitPolicyForm,
+  TokenRateLimitPolicy: TokenRateLimitPolicyForm,
+  DNSPolicy: DNSPolicyForm,
+  TLSPolicy: TLSPolicyForm,
+  Gateway: GatewayForm,
+  HTTPRoute: HTTPRouteForm,
+  GRPCRoute: GRPCRouteForm,
+};
 
 /**
  * Shared Create / Edit modal for every Kubernetes Kind the plugin
@@ -136,8 +158,7 @@ const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
     // Open on Form for Kinds we have a guided form for; leave YAML as
     // the default for everything else so users of unformed Kinds don't
     // stare at a "form not available yet" placeholder.
-    const hasForm = gvk.kind === 'AuthPolicy' || gvk.kind === 'RateLimitPolicy';
-    setTab(hasForm ? 'form' : 'yaml');
+    setTab(gvk.kind in FORMS_BY_KIND ? 'form' : 'yaml');
     if (mode === 'edit' && initialResource) {
       // Strip fields the API server owns/rejects on Update:
       //   status is subresource-managed, resourceVersion belongs to
@@ -269,27 +290,27 @@ const ResourceEditorModal: React.FC<ResourceEditorModalProps> = ({
                 a serialised manifest via `onChange` — no separate form
                 state, so switching Form↔YAML never shows stale data.
                 Kinds without a form yet fall back to the placeholder. */}
-            {gvk.kind === 'AuthPolicy' ? (
-              <AuthPolicyForm yaml={yaml} onChange={setYaml} />
-            ) : gvk.kind === 'RateLimitPolicy' ? (
-              <RateLimitPolicyForm yaml={yaml} onChange={setYaml} />
-            ) : (
-              <div style={{ padding: 16 }}>
-                <Content>
-                  <p>
-                    {t(
-                      'A guided form for {{kind}} is not available yet. Use the YAML tab — the starter template already has every required field.',
-                      { kind: gvk.kind },
-                    )}
-                  </p>
-                </Content>
-                <div style={{ marginTop: 12 }}>
-                  <Button variant="link" isInline onClick={() => setTab('yaml')}>
-                    {t('Switch to YAML')}
-                  </Button>
+            {(() => {
+              const FormForKind = FORMS_BY_KIND[gvk.kind];
+              if (FormForKind) return <FormForKind yaml={yaml} onChange={setYaml} />;
+              return (
+                <div style={{ padding: 16 }}>
+                  <Content>
+                    <p>
+                      {t(
+                        'A guided form for {{kind}} is not available yet. Use the YAML tab — the starter template already has every required field.',
+                        { kind: gvk.kind },
+                      )}
+                    </p>
+                  </Content>
+                  <div style={{ marginTop: 12 }}>
+                    <Button variant="link" isInline onClick={() => setTab('yaml')}>
+                      {t('Switch to YAML')}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </Tab>
           <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
             <div style={{ padding: 16 }}>
