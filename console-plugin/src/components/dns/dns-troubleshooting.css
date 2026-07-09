@@ -56,7 +56,11 @@
 .rhcl-dns-page .rhcl-dns-flow {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(180px, 1fr);
+  /* Fixed track width — a long ELB DNS name or hostname would otherwise
+   * pull one card wider than the others and cascade the whole row into
+   * horizontal scroll hell. Cap the track and force the inner content
+   * to truncate. */
+  grid-auto-columns: 200px;
   align-items: stretch;
   gap: 0;
   margin: 12px 0 24px;
@@ -71,7 +75,10 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-width: 180px;
+  width: 200px;
+  min-width: 0;
+  max-width: 200px;
+  overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1), border-color 200ms;
 }
@@ -118,22 +125,43 @@
 }
 .rhcl-dns-page .rhcl-dns-step-details {
   display: grid;
-  grid-template-columns: auto 1fr;
+  /* Fixed label column so the value column always has predictable
+   * shrink room. Without this the label auto-sizes to its longest
+   * entry ("External address") and the value column gets whatever
+   * pixels are left — which for an ELB DNS is not enough. */
+  grid-template-columns: 90px minmax(0, 1fr);
   gap: 2px 8px;
   margin: 8px 0 0;
   font-size: 12px;
+  min-width: 0;
 }
 .rhcl-dns-page .rhcl-dns-step-details dt {
   color: var(--pf-v5-global--Color--200);
   font-weight: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .rhcl-dns-page .rhcl-dns-step-details dd {
   margin: 0;
   color: var(--pf-t--global--color--regular);
+  /* Truncate one-liners; a title attribute on the element carries the
+   * full string as a native hover tooltip. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .rhcl-dns-page .rhcl-dns-step-details dd.is-muted {
   color: var(--pf-v5-global--Color--200);
   font-style: italic;
+}
+/* Card-level long strings (hostname + resource name) get the same
+ * ellipsis treatment. The title attribute on the element renders the
+ * full value on hover for anyone who needs to read the whole thing. */
+.rhcl-dns-page .rhcl-dns-step-summary {
+  overflow-wrap: anywhere;
 }
 .rhcl-dns-page .rhcl-dns-step-more {
   margin-top: 8px;

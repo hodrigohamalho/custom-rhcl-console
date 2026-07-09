@@ -74,8 +74,14 @@ const DNSStepCard: React.FC<Props> = ({ step, index }) => {
         <dl className="rhcl-dns-step-details">
           {step.details.map((d) => (
             <React.Fragment key={d.label}>
-              <dt>{d.label}</dt>
-              <dd className={d.muted ? 'is-muted' : undefined}>{d.value}</dd>
+              <dt title={d.label}>{d.label}</dt>
+              {/*
+                Long values (ELB DNS names, hosted-zone IDs, hostnames)
+                get truncated by the CSS ellipsis; the title attribute
+                exposes the full string on native hover so no info is
+                lost, just visually tidied.
+              */}
+              <dd className={d.muted ? 'is-muted' : undefined} title={d.value}>{d.value}</dd>
             </React.Fragment>
           ))}
         </dl>
