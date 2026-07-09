@@ -6,6 +6,9 @@ import {
   MenuToggle,
   Modal,
   ModalVariant,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
   Button,
   Alert,
   Content,
@@ -222,42 +225,52 @@ const ResourceActionsMenu: React.FC<ResourceActionsMenuProps> = ({
         />
       )}
 
+      {/*
+        Same layout gotcha the editor modal hit: <Modal> in PF v5 with
+        children rendered directly under it lets the fixed-height dialog
+        clip the confirmation copy and float the action row on top of
+        it. Compose properly via ModalHeader / ModalBody / ModalFooter
+        so the footer sticks below the message instead of overlapping,
+        and bump to `medium` so the resource name + namespace fit
+        without wrapping mid-word on typical CR names.
+      */}
       <Modal
-        variant={ModalVariant.small}
-        title={t('Delete {{label}}?', { label })}
+        variant={ModalVariant.medium}
         isOpen={confirming}
         onClose={() => (deleting ? undefined : setConfirming(false))}
+        aria-label={t('Delete {{label}}?', { label })}
       >
-        <Content>
-          <p>
-            {t('This will remove {{name}} from namespace {{ns}}. This cannot be undone.', {
-              name,
-              ns: namespace || t('(cluster-scoped)'),
-            })}
-          </p>
-        </Content>
-        {error && (
-          <Alert
-            variant="danger"
-            title={t('Delete failed')}
-            isInline
-            style={{ marginTop: 12 }}
-          >
-            {error}
-          </Alert>
-        )}
-        <div style={{ marginTop: 16, display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <Button
-            variant="link"
-            onClick={() => setConfirming(false)}
-            isDisabled={deleting}
-          >
-            {t('Cancel')}
-          </Button>
-          <Button variant="danger" onClick={onDelete} isLoading={deleting}>
+        <ModalHeader title={t('Delete {{label}}?', { label })} titleIconVariant="warning" />
+        <ModalBody>
+          <Content>
+            <p>
+              {t('This will remove {{name}} from namespace {{ns}}. This cannot be undone.', {
+                name,
+                ns: namespace || t('(cluster-scoped)'),
+              })}
+            </p>
+          </Content>
+          {error && (
+            <Alert
+              variant="danger"
+              title={t('Delete failed')}
+              isInline
+              style={{ marginTop: 12 }}
+            >
+              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0, fontFamily: 'inherit', fontSize: 'inherit' }}>
+                {error}
+              </pre>
+            </Alert>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <Button variant="danger" onClick={onDelete} isLoading={deleting} isDisabled={deleting}>
             {t('Delete')}
           </Button>
-        </div>
+          <Button variant="link" onClick={() => setConfirming(false)} isDisabled={deleting}>
+            {t('Cancel')}
+          </Button>
+        </ModalFooter>
       </Modal>
     </>
   );
