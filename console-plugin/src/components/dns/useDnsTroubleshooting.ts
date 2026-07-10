@@ -492,23 +492,33 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
       id: 'public-dns',
       title: 'Public DNS',
       resourceName: 'Public resolvers',
+      // Once the provider acknowledges the record (recordReady) — or an
+      // enforced DNSPolicy has synced with no separate DNSRecord CR — the
+      // name lives in the authoritative zone and public resolvers answer
+      // within seconds, so this reads healthy (mirrors the DNS Provider
+      // step's healthy signal). Previously every configured branch pinned
+      // to 'pending', which pushed overallStatus to 'pending' and raised a
+      // false "requires attention" banner on hostnames that resolve fine.
+      // The live resolver preview below (DNS Prober) stays the real-time
+      // per-resolver source of truth; a genuine resolver-specific failure
+      // surfaces there, not by holding this card at 'pending' forever.
       status: !dnsPolicy
         ? 'skipped'
         : matchingRecord && recordReady?.ok
-        ? 'pending'
+        ? 'healthy'
         : matchingRecord
         ? 'pending'
         : dnsPolicyEnforced?.ok
-        ? 'pending'
+        ? 'healthy'
         : 'not-configured',
       summary: !dnsPolicy
         ? 'Skipped — no records to propagate.'
         : matchingRecord && recordReady?.ok
-        ? 'Record acknowledged by provider. See the resolver preview below for live per-resolver status.'
+        ? 'Record published to the provider’s authoritative zone. See the resolver preview below for live per-resolver status.'
         : matchingRecord
         ? 'DNSRecord exists; waiting for provider before public resolvers see it.'
         : dnsPolicyEnforced?.ok
-        ? 'Records were sent to the provider. See the resolver preview below for live per-resolver status.'
+        ? 'Records synced to the provider. See the resolver preview below for live per-resolver status.'
         : 'Records not yet written.',
       details: [],
     };
