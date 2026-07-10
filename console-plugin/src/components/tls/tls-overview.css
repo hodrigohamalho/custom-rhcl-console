@@ -162,10 +162,12 @@
   gap: 6px;
   flex: 1 1 auto;
   min-height: 0;
+  /* Centre the fixed-height histogram vertically when the card is
+     stretched to match a tall sibling (Recent Events). See dns-overview.css. */
+  justify-content: center;
 }
 .rhcl-tls-overview-page .rhcl-tls-overview-histo-body > .rhcl-histogram {
-  flex: 1 1 auto;
-  min-height: 180px;
+  flex: 0 0 auto;
 }
 
 /* --------- Issuer donut layout --------- */

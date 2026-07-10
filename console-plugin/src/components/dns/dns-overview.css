@@ -165,10 +165,14 @@
   gap: 6px;
   flex: 1 1 auto;
   min-height: 0;
+  /* Centre the fixed-height histogram vertically when the card is
+     stretched to match a tall sibling (Recent Events). A single tall
+     bar sitting at 180px looks equally at home in a 200px card and a
+     500px card that way. */
+  justify-content: center;
 }
 .rhcl-dns-overview-page .rhcl-dns-overview-histo-body > .rhcl-histogram {
-  flex: 1 1 auto;
-  min-height: 180px;
+  flex: 0 0 auto;
 }
 
 /* --------- Providers donut layout --------- */

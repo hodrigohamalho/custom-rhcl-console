@@ -226,11 +226,15 @@ export const Histogram: React.FC<HistogramProps> = ({
     <div
       className="rhcl-histogram"
       style={{
+        // Fixed intrinsic layout. The outer card decides whether to
+        // grow (with whitespace above/below via justify-content:center
+        // on the wrapper — see dns-overview.css / tls-overview.css)
+        // or shrink to fit. A single tall bar was reaching ~700px
+        // when the SVG was `flex: 1 1 auto`.
         display: 'flex',
         flexDirection: 'column',
         gap: 4,
-        flex: '1 1 auto',
-        minHeight: height,
+        height: height,
       }}
     >
       {showValues && (
@@ -257,9 +261,8 @@ export const Histogram: React.FC<HistogramProps> = ({
         style={{
           display: 'block',
           width: '100%',
-          height: '100%',
-          minHeight: 100,
           flex: '1 1 auto',
+          minHeight: 0,
         }}
       >
         {bars.map((b, i) => {
