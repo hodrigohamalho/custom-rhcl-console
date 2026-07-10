@@ -36,14 +36,17 @@
   font-size: 18px;
   font-weight: 600;
 }
+/* No background, no rounded square — the coloured icon reads better
+   sitting straight next to the label. The tile look this used to have
+   turned into a dark blob on the dark theme and drew the eye to the
+   wrong thing. */
 .rhcl-tls-page .rhcl-tls-kpi-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--pf-t--global--background--color--secondary--default) 60%, transparent);
+  width: 24px;
+  height: 24px;
+  background: transparent;
 }
 .rhcl-tls-page .rhcl-tls-kpi-secondary {
   font-size: 12px;

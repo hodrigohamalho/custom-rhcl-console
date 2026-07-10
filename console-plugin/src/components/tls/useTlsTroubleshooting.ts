@@ -354,13 +354,22 @@ export function useTlsTroubleshooting(selectedHostname: string | null): TlsFlow 
       ) || null;
 
     // The listener that actually matches this host (for its
-    // certificateRefs).
-    const matchingListener = gateway?.spec?.listeners?.find((l) => {
+    // certificateRefs). A Kuadrant-managed Gateway typically declares
+    // TWO listeners per hostname — one on :80 (HTTP) and one on :443
+    // (HTTPS) — so picking `.find()` by hostname alone returns whatever
+    // the operator wrote first, which is usually the HTTP one and
+    // reads (incorrectly) as "listener is HTTP, not HTTPS" on the TLS
+    // page. Prefer HTTPS.
+    const hostnameMatches = (l: { hostname?: string }) => {
       if (!l.hostname) return false;
       if (l.hostname === hostname) return true;
       if (l.hostname.startsWith('*.')) return hostname.endsWith(l.hostname.slice(1));
       return false;
-    });
+    };
+    const httpsListener = gateway?.spec?.listeners?.find(
+      (l) => l.protocol === 'HTTPS' && hostnameMatches(l),
+    );
+    const matchingListener = httpsListener || gateway?.spec?.listeners?.find(hostnameMatches);
     const secretRefFromGw = matchingListener?.tls?.certificateRefs?.[0]?.name;
     const secretNsFromGw =
       matchingListener?.tls?.certificateRefs?.[0]?.namespace || gatewayNs;
