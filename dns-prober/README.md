@@ -62,7 +62,7 @@ whitelisting the resolver IPs on port 53.
 That script:
 
 1. `podman build` + `podman push` the image (defaults to
-   `quay.io/hodrigohamalho/custom-rhcl-console-dns-prober:latest` —
+   `quay.io/hodrigohamalho/custom-rhcl-console:dns-prober` —
    override with `IMAGE=<repo>`).
 2. `oc apply -f deploy/dns-prober.yaml` (namespace `custom-rhcl-console`).
 3. Waits for the rollout.
