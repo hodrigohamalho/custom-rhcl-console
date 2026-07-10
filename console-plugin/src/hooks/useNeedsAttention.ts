@@ -89,7 +89,18 @@ interface UseNeedsAttentionResult {
  * Items are returned in insertion order; the panel sorts critical →
  * warning → info internally, so we don't have to.
  */
-export function useNeedsAttention(): UseNeedsAttentionResult {
+function inNs<T extends { metadata?: { namespace?: string } }>(
+  arr: T[] | undefined,
+  ns: string | null | undefined,
+): T[] {
+  if (!arr) return [];
+  if (!ns) return arr;
+  return arr.filter((r) => r?.metadata?.namespace === ns);
+}
+
+export function useNeedsAttention(
+  namespaceFilter?: string | null,
+): UseNeedsAttentionResult {
   const [authP, authLoaded] = useK8sWatchResource<PolicyResource[]>({
     groupVersionKind: AuthPolicyGVK,
     isList: true,
@@ -171,11 +182,11 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
 
     type PolicyWithKind = { p: PolicyResource; kind: string };
     const allPolicies: PolicyWithKind[] = [
-      ...(authP || []).map((p) => ({ p, kind: 'AuthPolicy' })),
-      ...(rlp || []).map((p) => ({ p, kind: 'RateLimitPolicy' })),
-      ...(trlp || []).map((p) => ({ p, kind: 'TokenRateLimitPolicy' })),
-      ...(dnsP || []).map((p) => ({ p, kind: 'DNSPolicy' })),
-      ...(tlsP || []).map((p) => ({ p, kind: 'TLSPolicy' })),
+      ...inNs(authP, namespaceFilter).map((p) => ({ p, kind: 'AuthPolicy' })),
+      ...inNs(rlp, namespaceFilter).map((p) => ({ p, kind: 'RateLimitPolicy' })),
+      ...inNs(trlp, namespaceFilter).map((p) => ({ p, kind: 'TokenRateLimitPolicy' })),
+      ...inNs(dnsP, namespaceFilter).map((p) => ({ p, kind: 'DNSPolicy' })),
+      ...inNs(tlsP, namespaceFilter).map((p) => ({ p, kind: 'TLSPolicy' })),
     ];
 
     for (const { p, kind } of allPolicies) {
@@ -216,7 +227,13 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
       }
     }
 
-    for (const g of gatewayErrors) {
+    // When scoped to a namespace, only surface gateway-error / gateway-pod
+    // signals whose gateway lives in that namespace. Gateways in another
+    // namespace shouldn't clutter the current scope's Needs Attention.
+    const gwInScope = (g: { namespace: string }) =>
+      !namespaceFilter || g.namespace === namespaceFilter;
+
+    for (const g of gatewayErrors.filter(gwInScope)) {
       items.push({
         id: `gw-errors-${g.namespace}-${g.gateway}`,
         severity: 'critical',
@@ -232,7 +249,9 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
     // click straight to the affected pod. Grouping by pod within a
     // single item would hide the fact that a gateway with two crashing
     // pods and one merely-not-ready pod has TWO problems, not one.
-    for (const h of gwPodHealth) {
+    for (const h of gwPodHealth.filter(
+      (h) => !namespaceFilter || h.gatewayNamespace === namespaceFilter,
+    )) {
       const gwUrl = `/k8s/ns/${h.gatewayNamespace}/gateway.networking.k8s.io~v1~Gateway/${h.gatewayName}`;
       for (const s of h.signals) {
         const podUrl = `/k8s/ns/${s.podNamespace}/pods/${s.podName}`;
@@ -281,7 +300,7 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
       }
     }
 
-    const pendingApiKeys = (apiKeys || []).filter((k) => getAPIKeyPhase(k) === 'Pending');
+    const pendingApiKeys = inNs(apiKeys, namespaceFilter).filter((k) => getAPIKeyPhase(k) === 'Pending');
     if (pendingApiKeys.length > 0) {
       items.push({
         id: 'apikeys-pending',
@@ -316,5 +335,6 @@ export function useNeedsAttention(): UseNeedsAttentionResult {
     apiKeysLoaded,
     gwErrorsLoaded,
     gwPodLoaded,
+    namespaceFilter,
   ]);
 }

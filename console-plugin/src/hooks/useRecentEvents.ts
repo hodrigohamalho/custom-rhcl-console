@@ -127,7 +127,18 @@ interface UseRecentEventsResult {
  * newest-first, capped at 8 — same shape the RecentEventsPanel already
  * consumes, so the visual contract is preserved.
  */
-export function useRecentEvents(): UseRecentEventsResult {
+function inNs<T extends { metadata?: { namespace?: string } }>(
+  arr: T[] | undefined,
+  ns: string | null | undefined,
+): T[] {
+  if (!arr) return [];
+  if (!ns) return arr;
+  return arr.filter((r) => r?.metadata?.namespace === ns);
+}
+
+export function useRecentEvents(
+  namespaceFilter?: string | null,
+): UseRecentEventsResult {
   const [gateways, gwLoaded] = useK8sWatchResource<CRDLike[]>({
     groupVersionKind: GatewayGVK,
     isList: true,
@@ -178,15 +189,15 @@ export function useRecentEvents(): UseRecentEventsResult {
       tlsLoaded;
 
     const groups: KindedResource[] = [
-      { kind: 'Gateway', items: gateways || [] },
-      { kind: 'HTTPRoute', items: routes || [] },
-      { kind: 'AuthPolicy', items: authP || [] },
-      { kind: 'RateLimitPolicy', items: rlp || [] },
-      { kind: 'TokenRateLimitPolicy', items: trlp || [] },
-      { kind: 'DNSPolicy', items: dnsP || [] },
-      { kind: 'TLSPolicy', items: tlsP || [] },
-      { kind: 'APIProduct', items: apiProducts || [] },
-      { kind: 'APIKey', items: apiKeys || [] },
+      { kind: 'Gateway', items: inNs(gateways, namespaceFilter) },
+      { kind: 'HTTPRoute', items: inNs(routes, namespaceFilter) },
+      { kind: 'AuthPolicy', items: inNs(authP, namespaceFilter) },
+      { kind: 'RateLimitPolicy', items: inNs(rlp, namespaceFilter) },
+      { kind: 'TokenRateLimitPolicy', items: inNs(trlp, namespaceFilter) },
+      { kind: 'DNSPolicy', items: inNs(dnsP, namespaceFilter) },
+      { kind: 'TLSPolicy', items: inNs(tlsP, namespaceFilter) },
+      { kind: 'APIProduct', items: inNs(apiProducts, namespaceFilter) },
+      { kind: 'APIKey', items: inNs(apiKeys, namespaceFilter) },
     ];
 
     const out: Array<RecentEvent & { _ts: number }> = [];
@@ -251,5 +262,6 @@ export function useRecentEvents(): UseRecentEventsResult {
     trlpLoaded,
     dnsLoaded,
     tlsLoaded,
+    namespaceFilter,
   ]);
 }

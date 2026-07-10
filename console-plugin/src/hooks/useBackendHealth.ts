@@ -58,7 +58,9 @@ interface UseBackendHealthResult {
  * Overview that polls every 60s and would have to watch every
  * EndpointSlice cluster-wide.
  */
-export function useBackendHealth(): UseBackendHealthResult {
+export function useBackendHealth(
+  namespaceFilter?: string | null,
+): UseBackendHealthResult {
   const [routes, rtLoaded] = useK8sWatchResource<HTTPRoute[]>({
     groupVersionKind: HTTPRouteGVK,
     isList: true,
@@ -157,12 +159,21 @@ export function useBackendHealth(): UseBackendHealthResult {
       port?: number;
     };
     const seen = new Map<string, AccBackend>();
-    for (const r of routes || []) {
+    // Filter twice: the ROUTE'S namespace matches the scope (so we only
+    // pick up backend refs from routes in this scope), AND the backend
+    // itself lives in this NS. If a route in NS A references a backend
+    // in NS B via `backendRefs[].namespace`, filtering NS A hides that
+    // combo — deliberately, since the operator has scoped their view.
+    const scopedRoutes = !namespaceFilter
+      ? routes || []
+      : (routes || []).filter((r) => r.metadata?.namespace === namespaceFilter);
+    for (const r of scopedRoutes) {
       const routeNs = r.metadata?.namespace || '';
       for (const rule of r.spec?.rules || []) {
         for (const ref of rule.backendRefs || []) {
           const ns = ref.namespace || routeNs;
           if (!ns || !ref.name) continue;
+          if (namespaceFilter && ns !== namespaceFilter) continue;
           const key = `${ns}/${ref.name}`;
           if (!seen.has(key)) {
             seen.set(key, { namespace: ns, name: ref.name, port: ref.port });
@@ -195,5 +206,5 @@ export function useBackendHealth(): UseBackendHealthResult {
 
     rows.sort((a, b) => b.requestsPerMin - a.requestsPerMin);
     return { rows, loaded };
-  }, [routes, agg, rtLoaded, aggLoaded]);
+  }, [routes, agg, rtLoaded, aggLoaded, namespaceFilter]);
 }

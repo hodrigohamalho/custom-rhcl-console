@@ -7,46 +7,52 @@ import {
   SparklinePoint,
 } from '../components/overview/types';
 
-// Gateway-wide PromQL — no target filter, so we sum across every Istio
-// source workload (every Gateway-API gateway running with the Telemetry
-// CR active). `reporter="source"` keeps us on the gateway-side metrics
-// only (otherwise we'd double-count each request via the sidecar).
-//
+// Gateway-wide PromQL. `reporter="source"` keeps us on the gateway-side
+// metrics only (otherwise we'd double-count each request via the
+// sidecar). When a namespace filter is set, we append a
+// `destination_workload_namespace="X"` selector — this scopes the RPS /
+// success / error / p95 rollups to requests hitting workloads in that
+// namespace, which is what "Overview scoped to namespace X" should mean.
 // Instant queries: 5-minute rate windows compared to the equivalent
 // window 1 hour ago. That delta is what drives the up/down trend arrow.
-const RPS_NOW = 'sum(rate(istio_requests_total{reporter="source"}[5m]))';
-const RPS_PREV = 'sum(rate(istio_requests_total{reporter="source"}[5m] offset 1h))';
+function baseSelector(ns: string | null | undefined, extra = ''): string {
+  const parts = ['reporter="source"'];
+  if (ns) parts.push(`destination_workload_namespace="${ns}"`);
+  if (extra) parts.push(extra);
+  return `{${parts.join(',')}}`;
+}
 
-const SUCCESS_NOW =
-  '100 * sum(rate(istio_requests_total{reporter="source",response_code=~"2..|3.."}[5m])) ' +
-  '/ sum(rate(istio_requests_total{reporter="source"}[5m]))';
-const SUCCESS_PREV =
-  '100 * sum(rate(istio_requests_total{reporter="source",response_code=~"2..|3.."}[5m] offset 1h)) ' +
-  '/ sum(rate(istio_requests_total{reporter="source"}[5m] offset 1h))';
-
-const ERROR_NOW =
-  '100 * sum(rate(istio_requests_total{reporter="source",response_code=~"5.."}[5m])) ' +
-  '/ sum(rate(istio_requests_total{reporter="source"}[5m]))';
-const ERROR_PREV =
-  '100 * sum(rate(istio_requests_total{reporter="source",response_code=~"5.."}[5m] offset 1h)) ' +
-  '/ sum(rate(istio_requests_total{reporter="source"}[5m] offset 1h))';
-
-const P95_NOW =
-  'histogram_quantile(0.95, sum by(le)(rate(istio_request_duration_milliseconds_bucket{reporter="source"}[5m])))';
-const P95_PREV =
-  'histogram_quantile(0.95, sum by(le)(rate(istio_request_duration_milliseconds_bucket{reporter="source"}[5m] offset 1h)))';
-
-// Sparkline range queries — 2-minute rate windows over the last 30 minutes
-// give the line 12 points without burning Prometheus on the page load.
-const RPS_RANGE = 'sum(rate(istio_requests_total{reporter="source"}[2m]))';
-const SUCCESS_RANGE =
-  '100 * sum(rate(istio_requests_total{reporter="source",response_code=~"2..|3.."}[2m])) ' +
-  '/ sum(rate(istio_requests_total{reporter="source"}[2m]))';
-const ERROR_RANGE =
-  '100 * sum(rate(istio_requests_total{reporter="source",response_code=~"5.."}[2m])) ' +
-  '/ sum(rate(istio_requests_total{reporter="source"}[2m]))';
-const P95_RANGE =
-  'histogram_quantile(0.95, sum by(le)(rate(istio_request_duration_milliseconds_bucket{reporter="source"}[2m])))';
+function buildQueries(ns: string | null | undefined) {
+  const b = baseSelector(ns);
+  const b2xx3xx = baseSelector(ns, 'response_code=~"2..|3.."');
+  const b5xx = baseSelector(ns, 'response_code=~"5.."');
+  return {
+    RPS_NOW: `sum(rate(istio_requests_total${b}[5m]))`,
+    RPS_PREV: `sum(rate(istio_requests_total${b}[5m] offset 1h))`,
+    SUCCESS_NOW:
+      `100 * sum(rate(istio_requests_total${b2xx3xx}[5m])) ` +
+      `/ sum(rate(istio_requests_total${b}[5m]))`,
+    SUCCESS_PREV:
+      `100 * sum(rate(istio_requests_total${b2xx3xx}[5m] offset 1h)) ` +
+      `/ sum(rate(istio_requests_total${b}[5m] offset 1h))`,
+    ERROR_NOW:
+      `100 * sum(rate(istio_requests_total${b5xx}[5m])) ` +
+      `/ sum(rate(istio_requests_total${b}[5m]))`,
+    ERROR_PREV:
+      `100 * sum(rate(istio_requests_total${b5xx}[5m] offset 1h)) ` +
+      `/ sum(rate(istio_requests_total${b}[5m] offset 1h))`,
+    P95_NOW: `histogram_quantile(0.95, sum by(le)(rate(istio_request_duration_milliseconds_bucket${b}[5m])))`,
+    P95_PREV: `histogram_quantile(0.95, sum by(le)(rate(istio_request_duration_milliseconds_bucket${b}[5m] offset 1h)))`,
+    RPS_RANGE: `sum(rate(istio_requests_total${b}[2m]))`,
+    SUCCESS_RANGE:
+      `100 * sum(rate(istio_requests_total${b2xx3xx}[2m])) ` +
+      `/ sum(rate(istio_requests_total${b}[2m]))`,
+    ERROR_RANGE:
+      `100 * sum(rate(istio_requests_total${b5xx}[2m])) ` +
+      `/ sum(rate(istio_requests_total${b}[2m]))`,
+    P95_RANGE: `histogram_quantile(0.95, sum by(le)(rate(istio_request_duration_milliseconds_bucket${b}[2m])))`,
+  };
+}
 
 interface InstantSnapshot {
   rpsNow: number | null;
@@ -121,22 +127,26 @@ function fmtMs(v: number | null): string {
  * `usePrometheusTraffic` (instant) and the GatewayOperationalCards row
  * further down the page.
  */
-export function useOverviewTraffic(): UseOverviewTrafficResult {
+export function useOverviewTraffic(
+  namespaceFilter?: string | null,
+): UseOverviewTrafficResult {
   const [instant, setInstant] = React.useState<InstantSnapshot>(EMPTY_INSTANT);
   const [loaded, setLoaded] = React.useState(false);
   const [metricsAvailable, setMetricsAvailable] = React.useState(true);
 
+  const promql = React.useMemo(() => buildQueries(namespaceFilter), [namespaceFilter]);
+
   usePollingEffect(
     async (signal) => {
       const queries: Record<keyof InstantSnapshot, string> = {
-        rpsNow: RPS_NOW,
-        rpsPrev: RPS_PREV,
-        successNow: SUCCESS_NOW,
-        successPrev: SUCCESS_PREV,
-        errorNow: ERROR_NOW,
-        errorPrev: ERROR_PREV,
-        p95Now: P95_NOW,
-        p95Prev: P95_PREV,
+        rpsNow: promql.RPS_NOW,
+        rpsPrev: promql.RPS_PREV,
+        successNow: promql.SUCCESS_NOW,
+        successPrev: promql.SUCCESS_PREV,
+        errorNow: promql.ERROR_NOW,
+        errorPrev: promql.ERROR_PREV,
+        p95Now: promql.P95_NOW,
+        p95Prev: promql.P95_PREV,
       };
       try {
         const entries = await Promise.all(
@@ -169,18 +179,18 @@ export function useOverviewTraffic(): UseOverviewTrafficResult {
         setLoaded(true);
       }
     },
-    [],
+    [promql],
     { intervalMs: 60_000, enabled: metricsAvailable },
   );
 
   const rangeQueries = React.useMemo(
     () => [
-      { label: 'rps', query: RPS_RANGE },
-      { label: 'success', query: SUCCESS_RANGE },
-      { label: 'error', query: ERROR_RANGE },
-      { label: 'p95', query: P95_RANGE },
+      { label: 'rps', query: promql.RPS_RANGE },
+      { label: 'success', query: promql.SUCCESS_RANGE },
+      { label: 'error', query: promql.ERROR_RANGE },
+      { label: 'p95', query: promql.P95_RANGE },
     ],
-    [],
+    [promql],
   );
   // 30-minute window, 150s step → 12 sparkline points.
   const { series } = usePrometheusRange(rangeQueries, 1800, 150, 60_000);

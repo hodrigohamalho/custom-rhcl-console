@@ -115,7 +115,18 @@ interface UseGatewayOperationalDataResult {
  * Programmed conditions plus the 5% error threshold (matches the rule used
  * by NeedsAttentionPanel).
  */
-export function useGatewayOperationalData(): UseGatewayOperationalDataResult {
+function inNs<T extends { metadata?: { namespace?: string } }>(
+  arr: T[] | undefined,
+  ns: string | null | undefined,
+): T[] {
+  if (!arr) return [];
+  if (!ns) return arr;
+  return arr.filter((r) => r?.metadata?.namespace === ns);
+}
+
+export function useGatewayOperationalData(
+  namespaceFilter?: string | null,
+): UseGatewayOperationalDataResult {
   const [gateways, gwLoaded] = useK8sWatchResource<GatewayResource[]>({
     groupVersionKind: GatewayGVK,
     isList: true,
@@ -212,7 +223,12 @@ export function useGatewayOperationalData(): UseGatewayOperationalDataResult {
       ...(tlsP || []),
     ];
 
-    const rows: GatewayOpData[] = (gateways || []).map((gw) => {
+    // When scoped to a namespace, only render gateways whose CR lives
+    // there. Per-gateway PromQL rows still come cluster-wide from
+    // Prometheus but we simply don't join them into hidden gateways.
+    const scopedGateways = inNs(gateways, namespaceFilter);
+
+    const rows: GatewayOpData[] = scopedGateways.map((gw) => {
       const ns = gw.metadata?.namespace || '';
       const name = gw.metadata?.name || '';
       const workloadName = expectedWorkloadName(gw);
@@ -268,5 +284,6 @@ export function useGatewayOperationalData(): UseGatewayOperationalDataResult {
     dnsLoaded,
     tlsLoaded,
     statsLoaded,
+    namespaceFilter,
   ]);
 }

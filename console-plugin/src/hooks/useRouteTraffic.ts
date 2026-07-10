@@ -74,7 +74,18 @@ interface UseRouteTrafficResult {
  * Sort: highest RPM first (matches operational intuition of "the busy
  * routes first").
  */
-export function useRouteTraffic(): UseRouteTrafficResult {
+function inNs<T extends { metadata?: { namespace?: string } }>(
+  arr: T[] | undefined,
+  ns: string | null | undefined,
+): T[] {
+  if (!arr) return [];
+  if (!ns) return arr;
+  return arr.filter((r) => r?.metadata?.namespace === ns);
+}
+
+export function useRouteTraffic(
+  namespaceFilter?: string | null,
+): UseRouteTrafficResult {
   const [routes, rtLoaded] = useK8sWatchResource<HTTPRoute[]>({
     groupVersionKind: HTTPRouteGVK,
     isList: true,
@@ -218,7 +229,12 @@ export function useRouteTraffic(): UseRouteTrafficResult {
         return refNs === routeNs && ref.name === routeName;
       }).length;
 
-    const rows: RouteTrafficRow[] = (routes || []).map((r) => {
+    // Scope routes to the selected namespace before rendering. The
+     // per-route Prometheus rate rows still come in for every route on
+     // the cluster (route_name label carries the route's namespace,
+     // encoded as `<ns>.<name>.<idx>`), but we simply don't join them
+     // into hidden routes. Cheaper than gating the PromQL selector.
+    const rows: RouteTrafficRow[] = inNs(routes, namespaceFilter).map((r) => {
       const ns = r.metadata?.namespace || '';
       const name = r.metadata?.name || '';
       const key = `${ns}/${name}`;
@@ -243,5 +259,5 @@ export function useRouteTraffic(): UseRouteTrafficResult {
 
     rows.sort((a, b) => b.requestsPerMin - a.requestsPerMin);
     return { rows, loaded };
-  }, [routes, authP, rlp, trlp, dnsP, tlsP, agg, rtLoaded, authLoaded, rlpLoaded, trlpLoaded, dnsLoaded, tlsLoaded, aggLoaded]);
+  }, [routes, authP, rlp, trlp, dnsP, tlsP, agg, rtLoaded, authLoaded, rlpLoaded, trlpLoaded, dnsLoaded, tlsLoaded, aggLoaded, namespaceFilter]);
 }

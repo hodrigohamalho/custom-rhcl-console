@@ -110,7 +110,25 @@ interface Result {
  *                 dedicated BackendHealthWidget further down the page.
  *   - APIProduct: status.phase (Published/Draft/Deprecated) or Ready cond.
  */
-export function useEnvironmentHealth(): Result {
+/**
+ * `namespaceFilter` scopes every card on the Overview page to a single
+ * namespace. `null` / `undefined` means "cluster-wide" (the original
+ * behaviour). We keep watching cluster-wide and filter after — the
+ * SDK's list watch cache is shared across hooks, and post-filtering
+ * lets the operator flip between namespaces without any re-fetch.
+ */
+function inNs<T extends { metadata?: { namespace?: string } }>(
+  arr: T[] | undefined,
+  ns: string | null | undefined,
+): T[] {
+  if (!arr) return [];
+  if (!ns) return arr;
+  return arr.filter((r) => r?.metadata?.namespace === ns);
+}
+
+export function useEnvironmentHealth(
+  namespaceFilter?: string | null,
+): Result {
   const [gateways, gwLoaded] = useK8sWatchResource<ResourceWithConditions[]>({
     groupVersionKind: GatewayGVK,
     isList: true,
@@ -163,9 +181,9 @@ export function useEnvironmentHealth(): Result {
       tlsLoaded &&
       gwPodLoaded;
 
-    const gws = gateways || [];
-    const rts = routes || [];
-    const aps = apiProducts || [];
+    const gws = inNs(gateways, namespaceFilter);
+    const rts = inNs(routes, namespaceFilter);
+    const aps = inNs(apiProducts, namespaceFilter);
 
     // Gateways — the Kuadrant CR view says "Programmed + Accepted →
     // Healthy", the pod-health hook overrides to Critical/Warning when
@@ -203,11 +221,11 @@ export function useEnvironmentHealth(): Result {
 
     // Policies (union over 5 kinds)
     const allPolicies = [
-      ...(authP || []),
-      ...(rlp || []),
-      ...(trlp || []),
-      ...(dnsP || []),
-      ...(tlsP || []),
+      ...inNs(authP, namespaceFilter),
+      ...inNs(rlp, namespaceFilter),
+      ...inNs(trlp, namespaceFilter),
+      ...inNs(dnsP, namespaceFilter),
+      ...inNs(tlsP, namespaceFilter),
     ];
     let polEnforced = 0;
     let polAccepted = 0;
@@ -349,5 +367,6 @@ export function useEnvironmentHealth(): Result {
     dnsLoaded,
     tlsLoaded,
     gwPodLoaded,
+    namespaceFilter,
   ]);
 }

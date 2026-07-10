@@ -57,7 +57,18 @@ interface UsePolicyImpactRowsResult {
  * Sort is critical → warning → healthy so the row that needs eyeballs is at
  * the top (matches the Needs Attention ordering).
  */
-export function usePolicyImpactRows(): UsePolicyImpactRowsResult {
+function inNs<T extends { metadata?: { namespace?: string } }>(
+  arr: T[] | undefined,
+  ns: string | null | undefined,
+): T[] {
+  if (!arr) return [];
+  if (!ns) return arr;
+  return arr.filter((r) => r?.metadata?.namespace === ns);
+}
+
+export function usePolicyImpactRows(
+  namespaceFilter?: string | null,
+): UsePolicyImpactRowsResult {
   const [authP, authLoaded] = useK8sWatchResource<PolicyResource[]>({
     groupVersionKind: AuthPolicyGVK,
     isList: true,
@@ -85,11 +96,11 @@ export function usePolicyImpactRows(): UsePolicyImpactRowsResult {
 
     type PolicyEntry = { p: PolicyResource; kind: string };
     const entries: PolicyEntry[] = [
-      ...(authP || []).map((p) => ({ p, kind: 'AuthPolicy' })),
-      ...(rlp || []).map((p) => ({ p, kind: 'RateLimitPolicy' })),
-      ...(trlp || []).map((p) => ({ p, kind: 'TokenRateLimitPolicy' })),
-      ...(dnsP || []).map((p) => ({ p, kind: 'DNSPolicy' })),
-      ...(tlsP || []).map((p) => ({ p, kind: 'TLSPolicy' })),
+      ...inNs(authP, namespaceFilter).map((p) => ({ p, kind: 'AuthPolicy' })),
+      ...inNs(rlp, namespaceFilter).map((p) => ({ p, kind: 'RateLimitPolicy' })),
+      ...inNs(trlp, namespaceFilter).map((p) => ({ p, kind: 'TokenRateLimitPolicy' })),
+      ...inNs(dnsP, namespaceFilter).map((p) => ({ p, kind: 'DNSPolicy' })),
+      ...inNs(tlsP, namespaceFilter).map((p) => ({ p, kind: 'TLSPolicy' })),
     ];
 
     const rows: PolicyImpactRow[] = entries.map(({ p, kind }) => {
@@ -131,5 +142,5 @@ export function usePolicyImpactRows(): UsePolicyImpactRowsResult {
     rows.sort((a, b) => rank[a.status] - rank[b.status]);
 
     return { rows, loaded };
-  }, [authP, rlp, trlp, dnsP, tlsP, authLoaded, rlpLoaded, trlpLoaded, dnsLoaded, tlsLoaded]);
+  }, [authP, rlp, trlp, dnsP, tlsP, authLoaded, rlpLoaded, trlpLoaded, dnsLoaded, tlsLoaded, namespaceFilter]);
 }

@@ -24,6 +24,7 @@ import PolicyImpactTable from './PolicyImpactTable';
 import RouteTrafficTable from './RouteTrafficTable';
 import BackendHealthWidget from './BackendHealthWidget';
 import RecentEventsPanel from './RecentEventsPanel';
+import OverviewNamespaceFilter from './OverviewNamespaceFilter';
 import { useEnvironmentHealth } from '../../hooks/useEnvironmentHealth';
 import { useOverviewTraffic } from '../../hooks/useOverviewTraffic';
 import { useNeedsAttention } from '../../hooks/useNeedsAttention';
@@ -32,6 +33,7 @@ import { usePolicyImpactRows } from '../../hooks/usePolicyImpactRows';
 import { useRouteTraffic } from '../../hooks/useRouteTraffic';
 import { useBackendHealth } from '../../hooks/useBackendHealth';
 import { useRecentEvents } from '../../hooks/useRecentEvents';
+import { useOverviewNamespace } from '../../hooks/useOverviewNamespace';
 import ResourceEditorModal from '../common/ResourceEditorModal';
 import { starterFor, SupportedKind } from '../common/starterTemplates';
 import {
@@ -64,14 +66,19 @@ const OverviewPage: React.FC = () => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const [now, setNow] = React.useState<Date>(() => new Date());
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-  const { cards: envHealthCards } = useEnvironmentHealth();
-  const { metrics: trafficMetrics } = useOverviewTraffic();
-  const { items: needsAttentionItems } = useNeedsAttention();
-  const { gateways: gatewayOpRows } = useGatewayOperationalData();
-  const { rows: policyImpactRows } = usePolicyImpactRows();
-  const { rows: routeTrafficRows } = useRouteTraffic();
-  const { rows: backendHealthRows } = useBackendHealth();
-  const { events: recentEvents } = useRecentEvents();
+  // Namespace scope — `null` means "all namespaces". Persisted in the
+  // URL (`?namespace=`) so links are shareable, with a localStorage
+  // fallback for the "fresh entry via nav" case. See useOverviewNamespace.
+  const { namespace, setNamespace } = useOverviewNamespace();
+
+  const { cards: envHealthCards } = useEnvironmentHealth(namespace);
+  const { metrics: trafficMetrics } = useOverviewTraffic(namespace);
+  const { items: needsAttentionItems } = useNeedsAttention(namespace);
+  const { gateways: gatewayOpRows } = useGatewayOperationalData(namespace);
+  const { rows: policyImpactRows } = usePolicyImpactRows(namespace);
+  const { rows: routeTrafficRows } = useRouteTraffic(namespace);
+  const { rows: backendHealthRows } = useBackendHealth(namespace);
+  const { events: recentEvents } = useRecentEvents(namespace);
 
   const refresh = React.useCallback(() => setNow(new Date()), []);
 
@@ -145,6 +152,12 @@ const OverviewPage: React.FC = () => {
               alignItems={{ default: 'alignItemsCenter' }}
               spaceItems={{ default: 'spaceItemsSm' }}
             >
+              <FlexItem>
+                <OverviewNamespaceFilter
+                  namespace={namespace}
+                  onChange={setNamespace}
+                />
+              </FlexItem>
               <FlexItem>
                 <Dropdown
                   isOpen={isCreateOpen}
