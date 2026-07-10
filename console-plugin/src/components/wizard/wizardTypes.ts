@@ -424,7 +424,23 @@ export const READINESS: ReadinessItem[] = [
       s.useExistingGateway ? !!s.existingGatewayName : !!(s.gatewayName && s.hostname),
   },
   { key: 'route', label: 'Route', done: (s) => s.routes.length > 0 && s.routes.every((r) => !!r.path) },
-  { key: 'auth', label: 'Authentication', done: (s) => s.authMode !== 'anonymous' || true, applicable: () => true },
+  {
+    key: 'auth',
+    label: 'Authentication',
+    // Anonymous IS a valid explicit authentication decision now — the
+    // wizard emits an explicit AuthPolicy with `authentication.public.
+    // anonymous: {}` to override any deny-all on the parent Gateway. So
+    // every authMode counts as "done" as long as the required knob for
+    // that mode has been filled.
+    done: (s) => {
+      if (s.authMode === 'anonymous') return true;
+      if (s.authMode === 'api-key') return true;
+      if (s.authMode === 'jwt') return !!s.jwtIssuer;
+      if (s.authMode === 'oidc') return !!s.oidcDiscoveryUrl;
+      return false;
+    },
+    applicable: () => true,
+  },
   {
     key: 'ratelimit',
     label: 'Rate Limit',

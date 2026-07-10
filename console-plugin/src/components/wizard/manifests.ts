@@ -194,12 +194,27 @@ export function genReferenceGrants(s: WizardState): GeneratedResource[] {
 }
 
 export function genAuthPolicy(s: WizardState): GeneratedResource | null {
-  if (s.authMode === 'anonymous' || s.backends.length === 0) return null;
+  if (s.backends.length === 0) return null;
   const name = `${apiSlug(s)}-auth`;
   const ns = s.namespace;
 
   let authentication: Record<string, unknown>;
-  if (s.authMode === 'api-key') {
+  if (s.authMode === 'anonymous') {
+    // Explicit anonymous AuthPolicy on the HTTPRoute — needed even for
+    // "Public REST API" templates. Kuadrant policies attached to the
+    // Gateway propagate to every attached HTTPRoute by default; on
+    // shared gateways (openshift-ingress/rhcl-apps-gateway et al.) the
+    // parent typically carries a \`deny-all\` AuthPolicy for safety, and
+    // without an explicit route-level override the freshly-published
+    // "public" API 401s in production. Emitting an anonymous policy on
+    // the HTTPRoute overrides the parent per Gateway API GEP-713
+    // policy-attachment defaults semantics. This is exactly the
+    // pattern Kuadrant docs recommend for public routes on shared
+    // gateways.
+    authentication = {
+      public: { anonymous: {} },
+    };
+  } else if (s.authMode === 'api-key') {
     authentication = {
       'api-key-users': {
         apiKey: {
