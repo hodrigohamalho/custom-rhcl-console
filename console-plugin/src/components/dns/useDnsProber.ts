@@ -94,10 +94,26 @@ function toStepStatus(s: string): StepStatus {
  *                 hostname hasn't changed. Wired to the page's Refresh
  *                 and Run-all-checks buttons.
  */
+/**
+ * Path served by the OpenShift console when the ConsolePlugin CR declares
+ * `spec.proxy[].alias = dns-prober` pointing at the companion Service.
+ * Using this same-origin path (instead of the prober's own Route) sidesteps
+ * every browser cross-origin gotcha: no CORS preflight, no CSP connect-src
+ * mismatch, no self-signed-cert wall for the prober's Route. The console
+ * itself does the proxying and re-uses its own TLS + auth.
+ *
+ * Kept as a fixed path — the plugin name matches the ConsolePlugin CR name,
+ * which we ship. If someone renames the CR they have to update this too.
+ */
+const PROXY_PATH = '/api/proxy/plugin/custom-rhcl-console/dns-prober';
+
 export function useDnsProber(hostname: string | null, nonce: number = 0): UseDnsProberResult {
   const { config } = usePluginConfig();
-  const proberUrl = config.dnsProberUrl?.trim();
-  const configured = !!proberUrl;
+  // dnsProberUrl in the ConfigMap is now used purely as a "the operator
+  // has installed the companion" flag — the actual URL fetched is the
+  // console proxy path (see PROXY_PATH). Legacy value shape is kept so
+  // existing installs don't need a ConfigMap edit at upgrade time.
+  const configured = !!config.dnsProberUrl?.trim();
 
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -113,23 +129,16 @@ export function useDnsProber(hostname: string | null, nonce: number = 0): UseDns
     let cancelled = false;
     setLoading(true);
     setError(null);
-    // Trim trailing slash so the concat below always produces the same
-    // absolute URL regardless of how the operator wrote the config
-    // value ("https://...prober" vs "https://...prober/").
-    const base = proberUrl.replace(/\/+$/, '');
     (async () => {
       try {
-        // Plain `fetch` — deliberately NOT `consoleFetch`. The prober is a
-        // cross-origin service that lives on its own Route; consoleFetch
-        // sends `credentials: 'include'` + console CSRF headers, which
-        // trigger a credentialed CORS preflight the prober doesn't opt
-        // into (it responds `Access-Control-Allow-Credentials: false`),
-        // so every call fails with "Failed to fetch". The prober is a
-        // read-only, unauthenticated companion — no cookies to attach.
-        const res = await fetch(`${base}/api/probe`, {
+        // Hit the console-provided proxy path, not the prober's Route.
+        // See PROXY_PATH above for the rationale. This is a same-origin
+        // request; plain `fetch` is fine (no consoleFetch — the prober
+        // needs no console-session cookie, and consoleFetch's CSRF
+        // header only makes sense on Kubernetes API calls).
+        const res = await fetch(`${PROXY_PATH}/api/probe`, {
           method: 'POST',
-          mode: 'cors',
-          credentials: 'omit',
+          credentials: 'include',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             hostname,
@@ -165,7 +174,7 @@ export function useDnsProber(hostname: string | null, nonce: number = 0): UseDns
     return () => {
       cancelled = true;
     };
-  }, [proberUrl, configured, hostname, nonce]);
+  }, [configured, hostname, nonce]);
 
   return { configured, loading, error, resolvers, probedAt };
 }
