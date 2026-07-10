@@ -37,13 +37,18 @@ const DNSTimeline: React.FC<Props> = ({ events }) => (
       ) : (
         <ol className="rhcl-dns-timeline">
           {events.map((e, i) => (
+            // DOM order MUST match the grid columns declared in
+            // dns-troubleshooting.css (`56px 16px 1fr` = time, dot, body).
+            // Rendering the dot first pushed the timestamp into the 16px
+            // dot column, where "02:24 AM" wrapped and overlapped the
+            // title — the overlap the operator reported.
             <li key={`${e.when}-${i}`}>
+              <span className="rhcl-dns-timeline-time">{formatTime(e.when)}</span>
               <span
                 className="rhcl-dns-timeline-dot"
                 style={{ backgroundColor: STATUS_META[e.status].color }}
                 aria-hidden="true"
               />
-              <span className="rhcl-dns-timeline-time">{formatTime(e.when)}</span>
               <div className="rhcl-dns-timeline-body">
                 <div className="rhcl-dns-timeline-title">{e.title}</div>
                 {e.detail && <div className="rhcl-dns-timeline-detail">{e.detail}</div>}

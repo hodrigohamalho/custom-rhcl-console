@@ -127,8 +127,8 @@ const DNSResolverTable: React.FC<Props> = ({ simulatedResolvers, prober, hostnam
           >
             <EmptyStateBody>
               The browser has no DNS API, so cross-resolver probing has to run cluster-side. The
-              plugin ships with a small Quarkus companion (<code>rhcl-lab/apps/backend/dns-prober</code>)
-              that answers <code>POST /api/probe</code>. Once installed, set{' '}
+              plugin's own repo ships a small Quarkus companion (<code>dns-prober/</code>) that
+              answers <code>POST /api/probe</code>. Once installed, set{' '}
               <code>dnsProberUrl</code> on the <code>custom-rhcl-console-config</code> ConfigMap
               and this table starts showing live per-resolver results for hostname{' '}
               <code>{hostname || '(none)'}</code>.
@@ -140,7 +140,7 @@ const DNSResolverTable: React.FC<Props> = ({ simulatedResolvers, prober, hostnam
                   component="a"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href="https://github.com/redhat-banco-do-brasil/rhcl-lab/blob/main/tests/dns-prober.md"
+                  href="https://github.com/hodrigohamalho/custom-rhcl-console/tree/main/dns-prober"
                   icon={<ExternalLinkAltIcon />}
                   iconPosition="end"
                 >

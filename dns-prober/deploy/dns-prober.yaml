@@ -1,0 +1,81 @@
+---
+# Companion to custom-rhcl-console. Colocated in the plugin's own
+# namespace so the whole ecosystem lives together and RBAC/network
+# policies scope naturally. If your plugin lives elsewhere, adjust
+# metadata.namespace on every object below.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dns-prober
+  namespace: custom-rhcl-console
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-prober
+  namespace: custom-rhcl-console
+  labels:
+    app: dns-prober
+    app.kubernetes.io/part-of: custom-rhcl-console
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dns-prober
+  template:
+    metadata:
+      labels:
+        app: dns-prober
+    spec:
+      serviceAccountName: dns-prober
+      containers:
+        - name: dns-prober
+          image: quay.io/hodrigohamalho/custom-rhcl-console-dns-prober:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            httpGet: { path: /q/health/ready, port: 8080 }
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /q/health/live, port: 8080 }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 512Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dns-prober
+  namespace: custom-rhcl-console
+  labels:
+    app: dns-prober
+spec:
+  selector:
+    app: dns-prober
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: dns-prober
+  namespace: custom-rhcl-console
+  labels:
+    app: dns-prober
+spec:
+  to:
+    kind: Service
+    name: dns-prober
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
