@@ -66,6 +66,47 @@ export const CertificateGVK: K8sGroupVersionKind = {
   kind: 'Certificate',
 };
 
+// cert-manager issuance chain — each Certificate spawns a
+// CertificateRequest, which (for ACME issuers) spawns an Order that
+// creates one or more Challenges. Errors bubble up through
+// status.conditions on each step, so the TLS troubleshooting page
+// watches them all and correlates by `metadata.ownerReferences`.
+export const CertificateRequestGVK: K8sGroupVersionKind = {
+  group: 'cert-manager.io',
+  version: 'v1',
+  kind: 'CertificateRequest',
+};
+export const OrderGVK: K8sGroupVersionKind = {
+  group: 'acme.cert-manager.io',
+  version: 'v1',
+  kind: 'Order',
+};
+export const ChallengeGVK: K8sGroupVersionKind = {
+  group: 'acme.cert-manager.io',
+  version: 'v1',
+  kind: 'Challenge',
+};
+// Namespaced vs cluster-scoped counterparts. The TLSPolicy usually
+// references one of these by name — the plugin watches both and picks
+// the matching one when rendering the Issuer node.
+export const IssuerGVK: K8sGroupVersionKind = {
+  group: 'cert-manager.io',
+  version: 'v1',
+  kind: 'Issuer',
+};
+export const ClusterIssuerGVK: K8sGroupVersionKind = {
+  group: 'cert-manager.io',
+  version: 'v1',
+  kind: 'ClusterIssuer',
+};
+// tls.crt / tls.key live in a plain Secret; the Gateway listener
+// references it by name. Filtered client-side to `type=kubernetes.io/tls`.
+export const SecretGVK: K8sGroupVersionKind = {
+  group: '',
+  version: 'v1',
+  kind: 'Secret',
+};
+
 export const ServiceGVK: K8sGroupVersionKind = {
   group: '',
   version: 'v1',

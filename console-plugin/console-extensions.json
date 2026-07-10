@@ -83,12 +83,33 @@
     }
   },
   {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "connectivity-link-tls-troubleshooting",
+      "name": "%plugin__custom-rhcl-console~TLS%",
+      "href": "/connectivity-link/tls/troubleshooting",
+      "perspective": "admin",
+      "section": "connectivity-link",
+      "insertAfter": "connectivity-link-dns-troubleshooting"
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/connectivity-link/tls/troubleshooting",
+      "component": {
+        "$codeRef": "TLSTroubleshootingPage"
+      }
+    }
+  },
+  {
     "type": "console.navigation/separator",
     "properties": {
       "id": "connectivity-link-separator",
       "perspective": "admin",
       "section": "connectivity-link",
-      "insertAfter": "connectivity-link-dns-troubleshooting"
+      "insertAfter": "connectivity-link-tls-troubleshooting"
     }
   },
   {
