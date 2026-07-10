@@ -24,6 +24,8 @@ import { useTranslation } from 'react-i18next';
 import { PlanPolicyGVK, APIKeyGVK } from '../../models';
 import { PlanPolicy, APIKey } from '../../types';
 import StatusLabel from '../common/StatusLabel';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
+import '../../styles/plugin-glass.css';
 
 /**
  * Cluster-wide PlanPolicy browser. Each PlanPolicy declares the tiers
@@ -91,7 +93,7 @@ const PlansListPage: React.FC = () => {
   }
 
   return (
-    <>
+    <div className="rhcl-plugin-root">
       <PageSection variant="default">
         <Title headingLevel="h1">{t('Plans')}</Title>
         <p style={{ marginTop: 4, color: 'var(--pf-t--global--color--nonstatus--gray--default)' }}>
@@ -127,6 +129,7 @@ const PlansListPage: React.FC = () => {
                     <Th>{t('Tiers')}</Th>
                     <Th>{t('API Keys')}</Th>
                     <Th>{t('Status')}</Th>
+                    <Th aria-label={t('Actions')} />
                   </Tr>
                 </Thead>
                 {(policies || []).map((p, idx) => {
@@ -184,9 +187,17 @@ const PlansListPage: React.FC = () => {
                         <Td>
                           <StatusLabel conditions={p.status?.conditions} />
                         </Td>
+                        <Td isActionCell>
+                          <ResourceActionsMenu
+                            gvk={PlanPolicyGVK}
+                            namespace={ns}
+                            name={p.metadata?.name || ''}
+                            listHref="/connectivity-link/plans"
+                          />
+                        </Td>
                       </Tr>
                       <Tr isExpanded={isExpanded}>
-                        <Td colSpan={6} noPadding>
+                        <Td colSpan={7} noPadding>
                           <ExpandableRowContent>
                             <PlanDetails policy={p} keysByNsAndTier={keysByNsAndTier} />
                           </ExpandableRowContent>
@@ -200,7 +211,7 @@ const PlansListPage: React.FC = () => {
           </CardBody>
         </Card>
       </PageSection>
-    </>
+    </div>
   );
 };
 
@@ -255,7 +266,22 @@ const PlanDetails: React.FC<{
         })}
       </Grid>
       <ExpandableSection toggleText={t('Status conditions')} style={{ marginTop: 12 }}>
-        <pre style={{ fontSize: 12, background: 'var(--pf-t--global--color--nonstatus--gray--100)', padding: 8 }}>
+        {/* `nonstatus--gray--100` is a near-WHITE token — as a <pre>
+            background on the dark Console theme it rendered a light slab
+            with the theme's light text on top = unreadable. Use the
+            secondary surface + regular text token so it reads in both
+            themes. */}
+        <pre
+          style={{
+            fontSize: 12,
+            background: 'var(--pf-t--global--background--color--secondary--default)',
+            color: 'var(--pf-t--global--text--color--regular)',
+            border: '1px solid var(--pf-t--global--border--color--default)',
+            borderRadius: 6,
+            padding: 10,
+            overflowX: 'auto',
+          }}
+        >
           {JSON.stringify(policy.status?.conditions || [], null, 2)}
         </pre>
       </ExpandableSection>

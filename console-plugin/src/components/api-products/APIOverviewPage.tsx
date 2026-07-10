@@ -23,19 +23,23 @@ import {
   DescriptionListDescription,
   Flex,
   FlexItem,
+  Button,
 } from '@patternfly/react-core';
+import { PlusCircleIcon } from '@patternfly/react-icons';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { APIProductGVK, HTTPRouteGVK } from '../../models';
 import { APIProduct, HTTPRoute } from '../../types';
 import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
+import { OpenInTempoButton } from '../common/OpenInTempoButton';
 import { hostnameToURL } from '../../utils/hostname';
 import PlansCards from './PlansCards';
 import APIKeysTable from './APIKeysTable';
 import { APIProductBackendsCard } from './APIProductBackendsCard';
 import TrafficSummary from './TrafficSummary';
 import TopConsumers from './TopConsumers';
+import '../../styles/plugin-glass.css';
 
 const APIOverviewPage: React.FC = () => {
   const { ns, name } = useParams<{ ns: string; name: string }>();
@@ -46,13 +50,15 @@ const APIOverviewPage: React.FC = () => {
     namespace: ns,
   });
 
+  // Preserve `.rhcl-plugin-root` during load so this doesn't flash the
+  // Console's black background before APIProduct data arrives.
   if (!loaded || !product) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 
@@ -169,7 +175,7 @@ const APIOverviewContent: React.FC<{
   const routeName = targetRef?.name || '';
 
   return (
-    <>
+    <div className="rhcl-plugin-root">
       <PageSection variant="default">
         <Breadcrumb>
           <BreadcrumbItem>
@@ -195,15 +201,17 @@ const APIOverviewContent: React.FC<{
             <span>Version: {version}</span>
           </FlexItem>
           {/* Deep-link into Grafana, scoped to this API Product's HTTPRoute
-              and per-consumer dashboards. Filter uses route_name regex so
-              all rules of the HTTPRoute (`.0`, `.1`, ...) match. */}
+              and per-consumer dashboards. The dashboard template var has a
+              regex that already strips the trailing `.<rule_idx>` from the
+              Istio route_name label, so we send `<ns>.<httproute>` (without
+              a `.*` suffix) — that's the exact shape the dropdown lists. */}
           {targetRef?.kind === 'HTTPRoute' && targetRef?.name && (
             <FlexItem>
               <OpenInGrafanaButton
                 dashboard="api-overview"
                 label={t('Traffic')}
                 variant="tertiary"
-                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}.*` }}
+                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}` }}
               />
             </FlexItem>
           )}
@@ -213,10 +221,36 @@ const APIOverviewContent: React.FC<{
                 dashboard="api-consumers"
                 label={t('Consumers')}
                 variant="tertiary"
-                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}.*` }}
+                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}` }}
               />
             </FlexItem>
           )}
+          {targetRef?.kind === 'HTTPRoute' && targetRef?.name && (
+            <FlexItem>
+              {/* Tempo search filtered to the gateway service + http.route
+                  tag. From there the trace tree drills into wasm-shim,
+                  limitador, and the auto-instrumented banking-api spans. */}
+              <OpenInTempoButton
+                label={t('Traces')}
+                variant="tertiary"
+                vars={{
+                  serviceName: 'rhcl-gateway',
+                  tags: { 'http.route': targetRef.name },
+                  lookback: '1h',
+                }}
+              />
+            </FlexItem>
+          )}
+          {/* Same "Create API" CTA the list page offers, mirrored here so
+              an operator drilled into an API's detail can spin up a
+              sibling without bouncing back to /api-products. */}
+          <FlexItem>
+            <Link to="/connectivity-link/create-api">
+              <Button variant="primary" icon={<PlusCircleIcon />}>
+                {t('Create API')}
+              </Button>
+            </Link>
+          </FlexItem>
         </Flex>
         {tags.length > 0 && (
           <Flex style={{ marginTop: 8 }} spaceItems={{ default: 'spaceItemsSm' }}>
@@ -404,7 +438,7 @@ const APIOverviewContent: React.FC<{
           </GridItem>
         </Grid>
       </PageSection>
-    </>
+    </div>
   );
 };
 

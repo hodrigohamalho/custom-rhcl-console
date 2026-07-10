@@ -2,7 +2,7 @@ import * as React from 'react';
 // SDK 4.21 federates react-router 5.3; in v5 `Link` lives only in
 // `react-router-dom`. Keep this until we move back to SDK 4.22+.
 import { Link } from 'react-router-dom';
-import { PageSection, Title, Spinner, Bullseye } from '@patternfly/react-core';
+import { PageSection, Title, Spinner, Bullseye, Flex, FlexItem } from '@patternfly/react-core';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useTranslation } from 'react-i18next';
 import { useResourceWithRBAC } from '../../hooks/useResourceWithRBAC';
@@ -13,6 +13,9 @@ import StatusLabel from '../common/StatusLabel';
 import HostnameCell from '../common/HostnameCell';
 import EmptyRBACState from '../common/EmptyRBACState';
 import FilterToolbar from '../common/FilterToolbar';
+import ResourceActionsMenu from '../common/ResourceActionsMenu';
+import CreateResourceMenu from '../common/CreateResourceMenu';
+import '../../styles/plugin-glass.css';
 
 const HTTPRouteListPage: React.FC = () => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
@@ -63,22 +66,25 @@ const HTTPRouteListPage: React.FC = () => {
     return items;
   }, [httpRoutes, selectedNamespace, searchValue, selectedStatuses]);
 
+  // Every early-return path must keep `.rhcl-plugin-root` on the
+  // outermost element too — see GatewayListPage for the full rationale
+  // (avoids the black flash while HTTPRoute data loads).
   if (!loaded) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
         </PageSection>
         <PageSection isFilled>
           <Bullseye><Spinner size="xl" /></Bullseye>
         </PageSection>
-      </>
+      </div>
     );
   }
 
   if (!hasAccess) {
     return (
-      <>
+      <div className="rhcl-plugin-root">
         <PageSection variant="default">
           <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
         </PageSection>
@@ -90,14 +96,21 @@ const HTTPRouteListPage: React.FC = () => {
             kind="HTTPRoute"
           />
         </PageSection>
-      </>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="rhcl-plugin-root">
       <PageSection variant="default">
-        <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
+        <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+          <FlexItem>
+            <Title headingLevel="h1">{t('HTTPRoutes')}</Title>
+          </FlexItem>
+          <FlexItem>
+            <CreateResourceMenu kinds={['HTTPRoute']} defaultNamespace={selectedNamespace} />
+          </FlexItem>
+        </Flex>
       </PageSection>
       <PageSection>
         <FilterToolbar
@@ -119,6 +132,7 @@ const HTTPRouteListPage: React.FC = () => {
               <Th>{t('Parent gateway')}</Th>
               <Th>{t('Status')}</Th>
               <Th>{t('Backend refs')}</Th>
+              <Th aria-label={t('Actions')} />
             </Tr>
           </Thead>
           <Tbody>
@@ -152,13 +166,23 @@ const HTTPRouteListPage: React.FC = () => {
                     <StatusLabel conditions={route.status?.parents?.[0]?.conditions} />
                   </Td>
                   <Td>{backendCount}</Td>
+                  <Td isActionCell>
+                    <ResourceActionsMenu
+                      gvk={HTTPRouteGVK}
+                      namespace={ns}
+                      name={name}
+                      listHref="/connectivity-link/httproutes"
+                      resource={route}
+                      plural="httproutes"
+                    />
+                  </Td>
                 </Tr>
               );
             })}
           </Tbody>
         </Table>
       </PageSection>
-    </>
+    </div>
   );
 };
 

@@ -66,6 +66,47 @@ export const CertificateGVK: K8sGroupVersionKind = {
   kind: 'Certificate',
 };
 
+// cert-manager issuance chain — each Certificate spawns a
+// CertificateRequest, which (for ACME issuers) spawns an Order that
+// creates one or more Challenges. Errors bubble up through
+// status.conditions on each step, so the TLS troubleshooting page
+// watches them all and correlates by `metadata.ownerReferences`.
+export const CertificateRequestGVK: K8sGroupVersionKind = {
+  group: 'cert-manager.io',
+  version: 'v1',
+  kind: 'CertificateRequest',
+};
+export const OrderGVK: K8sGroupVersionKind = {
+  group: 'acme.cert-manager.io',
+  version: 'v1',
+  kind: 'Order',
+};
+export const ChallengeGVK: K8sGroupVersionKind = {
+  group: 'acme.cert-manager.io',
+  version: 'v1',
+  kind: 'Challenge',
+};
+// Namespaced vs cluster-scoped counterparts. The TLSPolicy usually
+// references one of these by name — the plugin watches both and picks
+// the matching one when rendering the Issuer node.
+export const IssuerGVK: K8sGroupVersionKind = {
+  group: 'cert-manager.io',
+  version: 'v1',
+  kind: 'Issuer',
+};
+export const ClusterIssuerGVK: K8sGroupVersionKind = {
+  group: 'cert-manager.io',
+  version: 'v1',
+  kind: 'ClusterIssuer',
+};
+// tls.crt / tls.key live in a plain Secret; the Gateway listener
+// references it by name. Filtered client-side to `type=kubernetes.io/tls`.
+export const SecretGVK: K8sGroupVersionKind = {
+  group: '',
+  version: 'v1',
+  kind: 'Secret',
+};
+
 export const ServiceGVK: K8sGroupVersionKind = {
   group: '',
   version: 'v1',
@@ -151,8 +192,33 @@ const POLICY_KIND_TO_GVK: Record<string, K8sGroupVersionKind> = {
   TLSPolicy: TLSPolicyGVK,
 };
 
+// URL segment per kind for the plugin's operational policy pages. Falls
+// back to the kind name lowercased for any policy discovered at runtime
+// that doesn't have a dedicated route yet.
+const POLICY_KIND_TO_PLUGIN_SLUG: Record<string, string> = {
+  AuthPolicy: 'auth',
+  RateLimitPolicy: 'ratelimit',
+  TokenRateLimitPolicy: 'tokenratelimit',
+  DNSPolicy: 'dns',
+  TLSPolicy: 'tls',
+};
+
+/**
+ * Plugin URL for the operational detail page of a policy. Used by every
+ * widget that wants "click → operational policy view" (overview,
+ * attachment view, list page, plans card). When the kind has no
+ * dedicated plugin page, falls back to the native Console CR detail.
+ */
 export function policyResourceURL(policyKind: string, namespace: string, name: string): string {
+  const slug = POLICY_KIND_TO_PLUGIN_SLUG[policyKind];
+  if (slug) return `/connectivity-link/policies/${slug}/${namespace}/${name}`;
   const gvk = POLICY_KIND_TO_GVK[policyKind];
   if (!gvk) return '#';
   return `/k8s/ns/${namespace}/${gvk.group}~${gvk.version}~${gvk.kind}/${name}`;
 }
+
+export const GRPCRouteGVK: K8sGroupVersionKind = {
+  group: 'gateway.networking.k8s.io',
+  version: 'v1',
+  kind: 'GRPCRoute',
+};
