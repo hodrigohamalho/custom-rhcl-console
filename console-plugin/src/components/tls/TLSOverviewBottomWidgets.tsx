@@ -54,14 +54,16 @@ interface ExpirationProps {
   buckets: ExpirationBucket[];
 }
 
+// Hex hardcoded — see the note in TLSOverviewKPICards for why the PF
+// status tokens don't render right in the SVG chart contexts.
 const severityColor = (s: ExpirationBucket['severity']): string => {
   switch (s) {
     case 'critical':
-      return STATUS_META.failing.color;
+      return '#C9190B';
     case 'warning':
-      return STATUS_META.warning.color;
+      return '#F0AB00';
     case 'healthy':
-      return STATUS_META.healthy.color;
+      return '#3E8635';
   }
 };
 

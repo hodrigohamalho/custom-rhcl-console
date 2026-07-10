@@ -7,7 +7,6 @@ import {
   ShieldAltIcon,
   CheckCircleIcon,
 } from '@patternfly/react-icons';
-import { STATUS_META } from '../dns/types';
 import { Donut, DonutSlice } from './OverviewCharts';
 import { KpiCounts } from './useTlsOverview';
 
@@ -17,18 +16,24 @@ import { KpiCounts } from './useTlsOverview';
  * cards elsewhere in the plugin; a donut sits inside the first card
  * for the health breakdown so the eye lands on where the mass of the
  * problem is at a glance.
+ *
+ * Colours are hardcoded hex — the PatternFly status tokens
+ * (`var(--pf-t--global--color--status--…--default)`) render muted in
+ * an SVG `stroke` context on the plugin's PF5 baseline, turning the
+ * donut into a washed-out ring. The RH design-system green/orange/red
+ * below match what the DNS Overview mockup shows.
  */
 
 const COLORS = {
-  healthy: STATUS_META.healthy.color,
-  expiring: STATUS_META.warning.color,
-  expired: STATUS_META.failing.color,
-  error: STATUS_META.unknown.color,
-  scheduled: STATUS_META.healthy.color,
-  notScheduled: STATUS_META.warning.color,
-  failed: STATUS_META.failing.color,
-  ok: STATUS_META.healthy.color,
-  unknown: STATUS_META.unknown.color,
+  healthy: '#3E8635',
+  expiring: '#F0AB00',
+  expired: '#C9190B',
+  error: '#8A8D90',
+  scheduled: '#3E8635',
+  notScheduled: '#F0AB00',
+  failed: '#C9190B',
+  ok: '#3E8635',
+  unknown: '#8A8D90',
 };
 
 interface Props {

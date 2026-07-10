@@ -168,12 +168,19 @@ export const Histogram: React.FC<HistogramProps> = ({
   const max = scaleMax ?? Math.max(1, ...bars.map((b) => b.value));
   const chartH = height - 40; // reserve space for value + label
   const columnW = 100 / Math.max(1, bars.length);
+  // Fixed `height` prop on the SVG + `maxHeight` in the style is
+  // load-bearing here — without them, `preserveAspectRatio="none"`
+  // stretches the SVG vertically to fill whatever the container gives
+  // it, and PatternFly Cards in a Grid row stretch to match the tallest
+  // sibling. Result: a single-tall-bar histogram grew ~500px tall next
+  // to a donut card.
   return (
     <svg
       width="100%"
+      height={height}
       viewBox={`0 0 100 ${height}`}
       preserveAspectRatio="none"
-      style={{ display: 'block' }}
+      style={{ display: 'block', maxHeight: height }}
     >
       {bars.map((b, i) => {
         const h = max > 0 ? (b.value / max) * chartH : 0;

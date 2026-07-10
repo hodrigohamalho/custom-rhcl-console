@@ -7,7 +7,6 @@ import {
   CheckCircleIcon,
   NetworkIcon,
 } from '@patternfly/react-icons';
-import { STATUS_META } from './types';
 import { Donut, DonutSlice } from '../tls/OverviewCharts';
 import { DnsKpiCounts } from './useDnsOverview';
 
@@ -15,13 +14,16 @@ import { DnsKpiCounts } from './useDnsOverview';
  * Five KPI cards along the top of the DNS Overview. Mirrors the shape
  * of the TLS Overview KPIs — donut on the left card, big number +
  * microstats on the other four.
+ *
+ * Colours hardcoded — see the note in TLSOverviewKPICards for why the
+ * PF status tokens render muted in the donut's SVG stroke context.
  */
 
 const COLORS = {
-  healthy: STATUS_META.healthy.color,
-  propagating: STATUS_META.warning.color,
-  failed: STATUS_META.failing.color,
-  unknown: STATUS_META.unknown.color,
+  healthy: '#3E8635',
+  propagating: '#F0AB00',
+  failed: '#C9190B',
+  unknown: '#8A8D90',
 };
 
 interface Props {

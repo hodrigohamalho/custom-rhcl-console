@@ -47,11 +47,13 @@ interface PropProps {
   buckets: PropagationBucket[];
 }
 
+// Hex hardcoded — see TLSOverviewKPICards for why the PF tokens
+// don't render right in the histogram/donut SVG contexts.
 const bucketColor = (s: PropagationBucket['severity']) => {
   switch (s) {
-    case 'critical': return STATUS_META.failing.color;
-    case 'warning':  return STATUS_META.warning.color;
-    case 'healthy':  return STATUS_META.healthy.color;
+    case 'critical': return '#C9190B';
+    case 'warning':  return '#F0AB00';
+    case 'healthy':  return '#3E8635';
   }
 };
 
