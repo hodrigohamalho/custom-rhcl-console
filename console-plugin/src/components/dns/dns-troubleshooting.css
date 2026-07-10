@@ -264,32 +264,82 @@
   margin-top: 2px;
 }
 
-/* --------- Resolver geo-map --------- */
+/* --------- Resolver region view ---------
+ *
+ * Was: side-by-side table + SVG world map. The map's hand-drawn
+ * continent silhouettes were visually confusing (read as random blobs),
+ * so the map became a region-grouped card row instead. Layout is
+ * simpler now: everything stacks vertically — table on top, region row
+ * below — so both scale to any viewport width without cramming.
+ */
 .rhcl-dns-page .rhcl-dns-resolver-body {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-}
-@media (min-width: 1400px) {
-  .rhcl-dns-page .rhcl-dns-resolver-body {
-    /* On wide viewports the table + map sit side by side. On narrower
-       ones they stack — 1400px is a rough breakpoint that keeps the
-       table's six columns readable. */
-    grid-template-columns: minmax(0, 1fr) 420px;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 .rhcl-dns-page .rhcl-dns-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.rhcl-dns-page .rhcl-dns-region-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.rhcl-dns-page .rhcl-dns-region-card {
+  border: 1px solid var(--pf-t--global--border--color--default);
+  background: var(--pf-t--global--background--color--floating--default);
+  border-radius: 6px;
+  padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   min-width: 0;
 }
-.rhcl-dns-page .rhcl-dns-map-svg {
-  width: 100%;
-  height: auto;
-  border-radius: 6px;
-  border: 1px solid var(--pf-t--global--border--color--default);
-  background: var(--pf-t--global--background--color--secondary--default);
+.rhcl-dns-page .rhcl-dns-region-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.rhcl-dns-page .rhcl-dns-region-emoji {
+  font-size: 14px;
+  line-height: 1;
+}
+.rhcl-dns-page .rhcl-dns-region-label {
+  font-weight: 600;
+  color: var(--pf-t--global--color--regular);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.rhcl-dns-page .rhcl-dns-region-count {
+  color: var(--pf-v5-global--Color--200);
+  font-size: 11px;
+  flex: 0 0 auto;
+}
+.rhcl-dns-page .rhcl-dns-region-dots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: center;
+}
+.rhcl-dns-page .rhcl-dns-region-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--pf-t--global--background--color--floating--default);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25);
+  cursor: help;
+  transition: transform 120ms ease-out;
+}
+.rhcl-dns-page .rhcl-dns-region-dot:hover {
+  transform: scale(1.15);
 }
 .rhcl-dns-page .rhcl-dns-map-legend {
   display: flex;
