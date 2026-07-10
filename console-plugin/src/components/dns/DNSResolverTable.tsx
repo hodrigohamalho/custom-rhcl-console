@@ -30,6 +30,7 @@ import {
 } from '@patternfly/react-icons';
 import { DnsResolver, STATUS_META } from './types';
 import { UseDnsProberResult } from './useDnsProber';
+import DNSResolverMap from './DNSResolverMap';
 
 /**
  * Cross-resolver table. Three states, mutually exclusive:
@@ -219,7 +220,15 @@ const DNSResolverTable: React.FC<Props> = ({ prober, hostname }) => {
         </span>
       </CardTitle>
       <CardBody>
-        <ResolverRows rows={prober.resolvers || []} />
+        <div className="rhcl-dns-resolver-body">
+          <ResolverRows rows={prober.resolvers || []} />
+          {/* Geo view — one dot per resolver at its HQ lat/lng, coloured
+              by the returned answer. Same answer, same colour: an
+              instant "which cluster did each resolver land on" read.
+              Renders below the table on narrow viewports, side-by-side
+              on wide ones (see rhcl-dns-resolver-body CSS). */}
+          <DNSResolverMap resolvers={prober.resolvers || []} />
+        </div>
       </CardBody>
     </Card>
   );

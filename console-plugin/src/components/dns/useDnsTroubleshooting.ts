@@ -98,17 +98,26 @@ interface EventResource extends K8sResourceCommon {
   involvedObject?: { kind?: string; name?: string; namespace?: string };
 }
 
+interface DNSRecordEndpoint {
+  dnsName?: string;
+  recordType?: string;
+  targets?: string[];
+  recordTTL?: number;
+  /** Kuadrant stamps `labels.owner=<hash>` on every endpoint entry it
+   *  writes. In multi-site setups the same hosted zone accumulates
+   *  entries from multiple clusters — one owner per cluster. The
+   *  presence of >1 distinct owner in `status.endpoints[].labels.owner`
+   *  is the tell that a record is co-owned. */
+  labels?: Record<string, string>;
+  providerSpecific?: Array<{ name?: string; value?: string }>;
+}
+
 interface DNSRecordResource extends K8sResourceCommon {
   spec?: {
     /** The hostname this record covers — Kuadrant reuses the Gateway
      *  listener hostname here so matching by string is exact. */
     rootHost?: string;
-    endpoints?: Array<{
-      dnsName?: string;
-      recordType?: string;
-      targets?: string[];
-      recordTTL?: number;
-    }>;
+    endpoints?: DNSRecordEndpoint[];
   };
   status?: {
     conditions?: Array<{
@@ -122,6 +131,9 @@ interface DNSRecordResource extends K8sResourceCommon {
     queuedAt?: string;
     /** Ownership tag Kuadrant stamps for multi-owner shared zones. */
     ownerID?: string;
+    /** Provider-merged view — one entry per (owner, target) tuple in
+     *  multi-site setups. This is the field we mine for co-ownership. */
+    endpoints?: DNSRecordEndpoint[];
   };
 }
 
@@ -366,6 +378,42 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
     );
     const recordReady = conditionStatus(matchingRecord?.status?.conditions, 'Ready');
     const endpointCount = matchingRecord?.spec?.endpoints?.length ?? 0;
+    // ---- Multi-site / co-ownership detection ----
+    //
+    // Kuadrant tags every endpoint entry the DNSPolicy writes with a
+    // `labels.owner=<hash>` — one owner per cluster contributing to the
+    // hosted zone. In single-cluster setups status.endpoints carries a
+    // single owner. In multi-site the same hosted zone accumulates
+    // endpoints from every cluster's DNSPolicy, and the provider merges
+    // them into a weighted / geo record set.
+    //
+    // We collect distinct owner ids from status.endpoints and pull out
+    // "ours" via status.ownerID when set (otherwise infer as the owner
+    // on any endpoint whose targets match spec.endpoints). Peers count
+    // = distinct owners − ours.
+    const statusEndpoints = matchingRecord?.status?.endpoints || [];
+    const ownerIds = new Set<string>();
+    for (const e of statusEndpoints) {
+      const o = e.labels?.owner;
+      if (o) ownerIds.add(o);
+    }
+    const ourOwnerId =
+      matchingRecord?.status?.ownerID ||
+      (() => {
+        const ourTargets = new Set(
+          (matchingRecord?.spec?.endpoints || []).flatMap((e) => e.targets || []),
+        );
+        const ourEndpoint = statusEndpoints.find((e) =>
+          (e.targets || []).some((t) => ourTargets.has(t)),
+        );
+        return ourEndpoint?.labels?.owner || null;
+      })();
+    const peerOwners = [...ownerIds].filter((o) => o !== ourOwnerId);
+    const isMultiSite = peerOwners.length > 0;
+    // Distinct targets across ALL owners — used as "N public endpoints
+    // total" in the details grid so the operator sees the merged view
+    // count, not just what THIS cluster contributed.
+    const mergedTargetCount = new Set(statusEndpoints.flatMap((e) => e.targets || [])).size;
     const providerStep: DnsStep = {
       id: 'provider',
       title: 'DNS Provider',
@@ -408,9 +456,25 @@ export function useDnsTroubleshooting(selectedHostname: string | null): DnsFlow 
             },
             {
               label: 'Endpoints',
-              value: matchingRecord ? String(endpointCount) : '—',
+              value: matchingRecord
+                ? isMultiSite
+                  ? `${endpointCount} local · ${mergedTargetCount} merged`
+                  : String(endpointCount)
+                : '—',
               muted: !matchingRecord,
             },
+            // Multi-site is important enough to earn its own row when
+            // detected. Wording tries to avoid Kubernetes jargon: "N
+            // clusters co-publishing" reads faster than
+            // "peers on status.endpoints[].labels.owner".
+            ...(isMultiSite
+              ? [
+                  {
+                    label: 'Co-owners',
+                    value: `${peerOwners.length} other cluster${peerOwners.length === 1 ? '' : 's'} co-publishing`,
+                  },
+                ]
+              : []),
           ]
         : [],
       href: matchingRecord

@@ -56,19 +56,27 @@ export interface UseDnsProberResult {
   probedAt: string | null;
 }
 
-/** The default resolver ladder we send to the prober. Kept in sync with
- *  the simulated one in `useDnsTroubleshooting.synthResolvers` so the
- *  table doesn't visibly reorder when the operator toggles the prober
- *  on later. */
-const DEFAULT_RESOLVERS = [
-  { name: 'Cloudflare', ip: '1.1.1.1', location: 'Global' },
-  { name: 'Google', ip: '8.8.8.8', location: 'Global' },
-  { name: 'Quad9', ip: '9.9.9.9', location: 'Global' },
-  { name: 'OpenDNS', ip: '208.67.222.222', location: 'Global' },
-  { name: 'Verisign', ip: '64.6.64.6', location: 'US' },
-  { name: 'Cisco OpenDNS', ip: '208.67.220.220', location: 'US' },
-  { name: 'AdGuard', ip: '94.140.14.14', location: 'EU' },
-  { name: 'Yandex', ip: '77.88.8.8', location: 'RU' },
+/** The default resolver ladder we send to the prober. Coordinates are
+ *  the resolver's HQ / representative location for the geo-map — real
+ *  anycast networks answer wherever the prober's egress lands, but for
+ *  the visualisation we treat each resolver as a point. */
+export const DEFAULT_RESOLVERS: Array<{
+  name: string;
+  ip: string;
+  location: string;
+  /** WGS84 latitude, north positive. */
+  lat: number;
+  /** WGS84 longitude, east positive. */
+  lng: number;
+}> = [
+  { name: 'Cloudflare',    ip: '1.1.1.1',         location: 'San Francisco, US', lat: 37.77,  lng: -122.42 },
+  { name: 'Google',        ip: '8.8.8.8',         location: 'Mountain View, US', lat: 37.39,  lng: -122.08 },
+  { name: 'Quad9',         ip: '9.9.9.9',         location: 'Zurich, CH',        lat: 47.37,  lng: 8.54 },
+  { name: 'OpenDNS',       ip: '208.67.222.222',  location: 'San Francisco, US', lat: 37.77,  lng: -122.42 },
+  { name: 'Verisign',      ip: '64.6.64.6',       location: 'Reston, US',        lat: 38.96,  lng: -77.36 },
+  { name: 'Cisco OpenDNS', ip: '208.67.220.220',  location: 'San Jose, US',      lat: 37.34,  lng: -121.89 },
+  { name: 'AdGuard',       ip: '94.140.14.14',    location: 'Nicosia, CY',       lat: 35.17,  lng: 33.36 },
+  { name: 'Yandex',        ip: '77.88.8.8',       location: 'Moscow, RU',        lat: 55.75,  lng: 37.62 },
 ];
 
 /** Normalise the prober's status string to the StepStatus enum used
