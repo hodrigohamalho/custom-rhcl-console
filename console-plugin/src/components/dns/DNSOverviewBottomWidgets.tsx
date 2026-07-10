@@ -68,7 +68,7 @@ export const DNSOverviewPropagation: React.FC<PropProps> = ({ buckets }) => {
             <EmptyStateBody>Nothing to place on the timeline yet.</EmptyStateBody>
           </EmptyState>
         ) : (
-          <>
+          <div className="rhcl-dns-overview-histo-body">
             <Histogram
               bars={buckets.map((b) => ({
                 label: b.label,
@@ -80,7 +80,7 @@ export const DNSOverviewPropagation: React.FC<PropProps> = ({ buckets }) => {
             <div className="rhcl-dns-overview-histo-caption">
               Total: {total} record{total === 1 ? '' : 's'}
             </div>
-          </>
+          </div>
         )}
       </CardBody>
     </Card>

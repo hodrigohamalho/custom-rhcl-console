@@ -148,6 +148,29 @@
   margin-top: 6px;
 }
 
+/* Propagation Distribution card lets the histogram SVG expand to fill
+   the row height, since PatternFly Grid stretches its GridItems to
+   match the tallest sibling (usually the Recent Events list here).
+   Without this, the SVG collapsed to its `min-height` (180px) and
+   left a tall empty strip beneath. */
+.rhcl-dns-overview-page .rhcl-dns-overview-panel > .pf-v5-c-card__body,
+.rhcl-dns-overview-page .rhcl-dns-overview-panel > .pf-v6-c-card__body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.rhcl-dns-overview-page .rhcl-dns-overview-histo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.rhcl-dns-overview-page .rhcl-dns-overview-histo-body > svg {
+  flex: 1 1 auto;
+  min-height: 180px;
+}
+
 /* --------- Providers donut layout --------- */
 .rhcl-dns-overview-page .rhcl-dns-overview-provider-row {
   display: flex;

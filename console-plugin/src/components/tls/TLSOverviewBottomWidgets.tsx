@@ -78,7 +78,7 @@ export const TLSOverviewExpiration: React.FC<ExpirationProps> = ({ buckets }) =>
             <EmptyStateBody>Nothing to place on the timeline yet.</EmptyStateBody>
           </EmptyState>
         ) : (
-          <>
+          <div className="rhcl-tls-overview-histo-body">
             <Histogram
               bars={buckets.map((b) => ({
                 label: b.label,
@@ -90,7 +90,7 @@ export const TLSOverviewExpiration: React.FC<ExpirationProps> = ({ buckets }) =>
             <div className="rhcl-tls-overview-histo-caption">
               Total: {total} certificate{total === 1 ? '' : 's'}
             </div>
-          </>
+          </div>
         )}
       </CardBody>
     </Card>
