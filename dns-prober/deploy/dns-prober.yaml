@@ -35,6 +35,12 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+            - containerPort: 8443
+              name: https
+          volumeMounts:
+            - name: tls
+              mountPath: /etc/dns-prober-tls
+              readOnly: true
           readinessProbe:
             httpGet: { path: /q/health/ready, port: 8080 }
             initialDelaySeconds: 10
@@ -46,6 +52,14 @@ spec:
           resources:
             requests: { cpu: 100m, memory: 256Mi }
             limits: { cpu: 500m, memory: 512Mi }
+      volumes:
+        # Cert Secret is minted by OpenShift's service-serving-cert
+        # operator, triggered by the annotation on the Service below.
+        # On a fresh install the Secret takes a few seconds to appear;
+        # the pod stays Pending until it lands.
+        - name: tls
+          secret:
+            secretName: dns-prober-tls
 ---
 apiVersion: v1
 kind: Service
@@ -54,6 +68,13 @@ metadata:
   namespace: custom-rhcl-console
   labels:
     app: dns-prober
+  annotations:
+    # Ask the service-serving-cert operator for a signed cert. The
+    # resulting Secret is mounted into the pod as tls.crt / tls.key,
+    # and Quarkus serves HTTPS on 8443 from it. The console plugin
+    # proxy (ConsolePlugin.spec.proxy) requires HTTPS on the target
+    # Service — this is what makes the /api/proxy/plugin/... path work.
+    service.beta.openshift.io/serving-cert-secret-name: dns-prober-tls
 spec:
   selector:
     app: dns-prober
@@ -61,6 +82,10 @@ spec:
     - name: http
       port: 8080
       targetPort: 8080
+      protocol: TCP
+    - name: https
+      port: 8443
+      targetPort: 8443
       protocol: TCP
 ---
 apiVersion: route.openshift.io/v1
