@@ -104,6 +104,7 @@
       "GRPCRouteListPage": "./components/grpcroutes/GRPCRouteListPage",
       "DNSTroubleshootingPage": "./components/dns/DNSTroubleshootingPage",
       "TLSTroubleshootingPage": "./components/tls/TLSTroubleshootingPage",
+      "TLSOverviewPage": "./components/tls/TLSOverviewPage",
       "InternalDeveloperHubRedirect": "./components/developer-hub/InternalDeveloperHubRedirect",
       "internalDeveloperHubFlag": "./feature-flags/internalDeveloperHubFlag"
     },
