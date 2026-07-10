@@ -4,7 +4,7 @@ A custom OpenShift Console dynamic plugin for
 [Red Hat Connectivity Link](https://docs.kuadrant.io) (RHCL / Kuadrant).
 It surfaces operationally critical data — hostnames, attached policies,
 effective policy resolution, TLS/DNS health, traffic metrics, and API
-Products — on a single screen, using the logged-in user's RBAC throughout.
+Products — on API focused screens, using the logged-in user's RBAC throughout.
 
 ## What it provides
 
