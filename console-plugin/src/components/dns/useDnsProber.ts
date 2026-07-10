@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
 import { usePluginConfig } from '../../utils/pluginConfig';
 import { DnsResolver, StepStatus } from './types';
 
@@ -120,8 +119,17 @@ export function useDnsProber(hostname: string | null, nonce: number = 0): UseDns
     const base = proberUrl.replace(/\/+$/, '');
     (async () => {
       try {
-        const res = await consoleFetch(`${base}/api/probe`, {
+        // Plain `fetch` — deliberately NOT `consoleFetch`. The prober is a
+        // cross-origin service that lives on its own Route; consoleFetch
+        // sends `credentials: 'include'` + console CSRF headers, which
+        // trigger a credentialed CORS preflight the prober doesn't opt
+        // into (it responds `Access-Control-Allow-Credentials: false`),
+        // so every call fails with "Failed to fetch". The prober is a
+        // read-only, unauthenticated companion — no cookies to attach.
+        const res = await fetch(`${base}/api/probe`, {
           method: 'POST',
+          mode: 'cors',
+          credentials: 'omit',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             hostname,
