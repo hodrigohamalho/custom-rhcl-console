@@ -33,6 +33,28 @@ Key capabilities:
 See [SPECIFICATION.md](SPECIFICATION.md) for the full requirements
 (FR-001 through FR-026, NFR-001 through NFR-011).
 
+## Screenshots
+
+### Gateway Detail
+
+![Gateway Detail](./docs/images/gateway-detail.png)
+
+### HTTPRoute Detail — Backends
+
+![HTTPRoute Backends](./docs/images/httproute-backends.png)
+
+### HTTPRoute Detail
+
+![HTTPRoute Detail](./docs/images/httproute-detail.png)
+
+### API Product Overview
+
+![API Product Overview](./docs/images/api-product-overview.png)
+
+### Cost Monitoring
+
+![Cost Monitoring](./docs/images/cost-monitoring.png)
+
 ## Prerequisites
 
 | Requirement | Minimum version |
