@@ -968,11 +968,63 @@ export const SecurityStep: React.FC<{ state: WizardState; patch: Patch }> = ({ s
 
         {state.authMode === 'api-key' && (
           <div className="rhcl-wiz-auth-config">
-            <Field label="Header name" hint="Consumers send their key in this HTTP header.">
+            <Field
+              label="Where does the key travel?"
+              hint="Header is the norm for server-to-server calls; query string is common for CDN-fronted / browser-only clients that can't set custom headers."
+            >
+              {/*
+                Two-radio picker instead of a dropdown so both options
+                are visible at a glance — the wire-format decision is
+                load-bearing and often surprises browser-first teams.
+              */}
+              <div className="rhcl-wiz-radio-row">
+                <Radio
+                  id="apikey-src-header"
+                  name="apikey-source"
+                  label="HTTP header"
+                  isChecked={state.apiKeyCredentialSource !== 'query'}
+                  onChange={() =>
+                    patch({
+                      apiKeyCredentialSource: 'header',
+                      // Snap the default value if the previous mode's
+                      // hint was still in the field.
+                      apiKeyHeader:
+                        state.apiKeyHeader === 'api_key' || !state.apiKeyHeader
+                          ? 'api-key'
+                          : state.apiKeyHeader,
+                    })
+                  }
+                />
+                <Radio
+                  id="apikey-src-query"
+                  name="apikey-source"
+                  label="Query string"
+                  isChecked={state.apiKeyCredentialSource === 'query'}
+                  onChange={() =>
+                    patch({
+                      apiKeyCredentialSource: 'query',
+                      apiKeyHeader:
+                        state.apiKeyHeader === 'api-key' || !state.apiKeyHeader
+                          ? 'api_key'
+                          : state.apiKeyHeader,
+                    })
+                  }
+                />
+              </div>
+            </Field>
+            <Field
+              label={state.apiKeyCredentialSource === 'query' ? 'Query parameter name' : 'Header name'}
+              hint={
+                state.apiKeyCredentialSource === 'query'
+                  ? 'Consumers pass ?<name>=<key> on every request.'
+                  : 'Consumers send their key in this HTTP header.'
+              }
+            >
               <input
                 className="rhcl-wiz-input"
                 value={state.apiKeyHeader}
                 onChange={(e) => patch({ apiKeyHeader: e.target.value })}
+                placeholder={state.apiKeyCredentialSource === 'query' ? 'api_key' : 'api-key'}
               />
             </Field>
           </div>

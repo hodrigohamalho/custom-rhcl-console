@@ -159,7 +159,12 @@ const CreateApiWizard: React.FC = () => {
         : '<your-key>';
     const curl =
       state.authMode === 'api-key'
-        ? `curl ${url} -H "${state.apiKeyHeader}: ${apiKeyForCurl}"`
+        ? state.apiKeyCredentialSource === 'query'
+          ? // Query string: append ?<name>=<value> (or & if the base URL
+            // already has one). Kuadrant's Authorino reads it from
+            // request.query.<name> — nothing else needed on the wire.
+            `curl "${url}${url.includes('?') ? '&' : '?'}${state.apiKeyHeader}=${apiKeyForCurl}"`
+          : `curl ${url} -H "${state.apiKeyHeader}: ${apiKeyForCurl}"`
         : state.authMode === 'jwt' || state.authMode === 'oidc'
         ? `curl ${url} -H "Authorization: Bearer <token>"`
         : `curl ${url}`;

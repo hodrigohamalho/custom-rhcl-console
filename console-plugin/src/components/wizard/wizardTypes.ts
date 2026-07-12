@@ -145,6 +145,17 @@ export interface WizardState {
 
   // Step 5 — Security
   authMode: AuthMode;
+  /**
+   * Where API-key auth expects the key on the wire. Kuadrant's
+   * AuthPolicy supports both:
+   *   - "header" → \`credentials.customHeader.name: <apiKeyHeader>\`
+   *   - "query"  → \`credentials.queryString.name: <apiKeyHeader>\`
+   * Header is the default and matches every other integration in the
+   * plugin (test-key modal, wizard smoke-test); query is what CDN /
+   * frontend-only clients typically need when they can't customise
+   * headers.
+   */
+  apiKeyCredentialSource: 'header' | 'query';
   apiKeyHeader: string;
   jwtIssuer: string;
   jwtAudience: string;
@@ -253,6 +264,7 @@ export function defaultState(): WizardState {
     tlsEnabled: true,
     routes: [{ id: newRouteId(), method: 'ANY', path: '/', matchType: 'PathPrefix' }],
     authMode: 'api-key',
+    apiKeyCredentialSource: 'header',
     apiKeyHeader: 'api-key',
     jwtIssuer: '',
     jwtAudience: '',

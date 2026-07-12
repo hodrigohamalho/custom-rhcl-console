@@ -221,7 +221,10 @@ export function genAuthPolicy(s: WizardState): GeneratedResource | null {
           selector: { matchLabels: { app: `${apiSlug(s)}-apikey` } },
           allNamespaces: true,
         },
-        credentials: { customHeader: { name: s.apiKeyHeader || 'api-key' } },
+        credentials:
+          s.apiKeyCredentialSource === 'query'
+            ? { queryString: { name: s.apiKeyHeader || 'api_key' } }
+            : { customHeader: { name: s.apiKeyHeader || 'api-key' } },
       },
     };
   } else if (s.authMode === 'jwt') {
