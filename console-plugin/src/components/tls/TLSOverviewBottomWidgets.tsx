@@ -54,14 +54,16 @@ interface ExpirationProps {
   buckets: ExpirationBucket[];
 }
 
+// Hex hardcoded — see the note in TLSOverviewKPICards for why the PF
+// status tokens don't render right in the SVG chart contexts.
 const severityColor = (s: ExpirationBucket['severity']): string => {
   switch (s) {
     case 'critical':
-      return STATUS_META.failing.color;
+      return '#C9190B';
     case 'warning':
-      return STATUS_META.warning.color;
+      return '#F0AB00';
     case 'healthy':
-      return STATUS_META.healthy.color;
+      return '#3E8635';
   }
 };
 
@@ -76,7 +78,7 @@ export const TLSOverviewExpiration: React.FC<ExpirationProps> = ({ buckets }) =>
             <EmptyStateBody>Nothing to place on the timeline yet.</EmptyStateBody>
           </EmptyState>
         ) : (
-          <>
+          <div className="rhcl-tls-overview-histo-body">
             <Histogram
               bars={buckets.map((b) => ({
                 label: b.label,
@@ -88,7 +90,7 @@ export const TLSOverviewExpiration: React.FC<ExpirationProps> = ({ buckets }) =>
             <div className="rhcl-tls-overview-histo-caption">
               Total: {total} certificate{total === 1 ? '' : 's'}
             </div>
-          </>
+          </div>
         )}
       </CardBody>
     </Card>
@@ -99,9 +101,10 @@ export const TLSOverviewExpiration: React.FC<ExpirationProps> = ({ buckets }) =>
 
 interface IssuersProps {
   slices: IssuerSlice[];
+  onIssuerClick?: (issuer: string) => void;
 }
 
-export const TLSOverviewIssuers: React.FC<IssuersProps> = ({ slices }) => {
+export const TLSOverviewIssuers: React.FC<IssuersProps> = ({ slices, onIssuerClick }) => {
   const total = slices.reduce((acc, s) => acc + s.count, 0);
   const segments = slices.map((s, i) => ({
     label: s.label,
@@ -133,22 +136,41 @@ export const TLSOverviewIssuers: React.FC<IssuersProps> = ({ slices }) => {
               strokeWidth={20}
             />
             <ul className="rhcl-tls-overview-issuer-legend">
-              {segments.map((s) => (
-                <li key={s.label}>
-                  <span
-                    className="rhcl-tls-overview-swatch"
-                    style={{ background: s.color }}
-                  />
-                  <span className="rhcl-tls-overview-issuer-label">{s.label}</span>
-                  <span className="rhcl-tls-overview-issuer-count">
-                    {s.value}
-                    <span className="rhcl-tls-overview-issuer-pct">
-                      {' '}
-                      · {Math.round((s.value / total) * 100)}%
+              {segments.map((s) => {
+                const clickable = !!onIssuerClick;
+                return (
+                  <li
+                    key={s.label}
+                    className={clickable ? 'rhcl-tls-overview-issuer-item--clickable' : undefined}
+                    onClick={clickable ? () => onIssuerClick!(s.label) : undefined}
+                    role={clickable ? 'button' : undefined}
+                    tabIndex={clickable ? 0 : undefined}
+                    onKeyDown={
+                      clickable
+                        ? (e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              onIssuerClick!(s.label);
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <span
+                      className="rhcl-tls-overview-swatch"
+                      style={{ background: s.color }}
+                    />
+                    <span className="rhcl-tls-overview-issuer-label">{s.label}</span>
+                    <span className="rhcl-tls-overview-issuer-count">
+                      {s.value}
+                      <span className="rhcl-tls-overview-issuer-pct">
+                        {' '}
+                        · {Math.round((s.value / total) * 100)}%
+                      </span>
                     </span>
-                  </span>
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}

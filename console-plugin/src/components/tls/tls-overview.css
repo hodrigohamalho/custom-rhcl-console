@@ -106,6 +106,30 @@
   font-weight: 600;
   color: var(--pf-t--global--color--regular);
 }
+.rhcl-tls-overview-page .rhcl-tls-overview-kpi-row--clickable {
+  cursor: pointer;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  border-radius: 4px;
+  transition: background 120ms ease-out;
+}
+.rhcl-tls-overview-page .rhcl-tls-overview-kpi-row--clickable:hover,
+.rhcl-tls-overview-page .rhcl-tls-overview-kpi-row--clickable:focus-visible {
+  background: color-mix(in srgb, var(--pf-t--global--color--brand--default) 8%, transparent);
+  outline: none;
+}
+.rhcl-tls-overview-page .rhcl-tls-overview-issuer-item--clickable {
+  cursor: pointer;
+  padding: 2px 6px;
+  margin: 0 -6px;
+  border-radius: 4px;
+  transition: background 120ms ease-out;
+}
+.rhcl-tls-overview-page .rhcl-tls-overview-issuer-item--clickable:hover,
+.rhcl-tls-overview-page .rhcl-tls-overview-issuer-item--clickable:focus-visible {
+  background: color-mix(in srgb, var(--pf-t--global--color--brand--default) 8%, transparent);
+  outline: none;
+}
 
 /* --------- Table header --------- */
 .rhcl-tls-overview-page .rhcl-tls-overview-hostname {
@@ -116,11 +140,34 @@
   text-decoration: underline;
 }
 
-/* --------- Histogram caption --------- */
+/* --------- Histogram --------- */
 .rhcl-tls-overview-page .rhcl-tls-overview-histo-caption {
   font-size: 12px;
   color: var(--pf-v5-global--Color--200);
   margin-top: 6px;
+}
+
+/* Expiration Distribution card lets the histogram SVG expand to fill
+   the row height when neighbours (Top Issuers, Recent Events) push
+   the row taller. See dns-overview.css for the same treatment. */
+.rhcl-tls-overview-page .rhcl-tls-overview-panel > .pf-v5-c-card__body,
+.rhcl-tls-overview-page .rhcl-tls-overview-panel > .pf-v6-c-card__body {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.rhcl-tls-overview-page .rhcl-tls-overview-histo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Centre the fixed-height histogram vertically when the card is
+     stretched to match a tall sibling (Recent Events). See dns-overview.css. */
+  justify-content: center;
+}
+.rhcl-tls-overview-page .rhcl-tls-overview-histo-body > .rhcl-histogram {
+  flex: 0 0 auto;
 }
 
 /* --------- Issuer donut layout --------- */

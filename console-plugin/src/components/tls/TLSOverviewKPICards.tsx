@@ -7,7 +7,6 @@ import {
   ShieldAltIcon,
   CheckCircleIcon,
 } from '@patternfly/react-icons';
-import { STATUS_META } from '../dns/types';
 import { Donut, DonutSlice } from './OverviewCharts';
 import { KpiCounts } from './useTlsOverview';
 
@@ -17,35 +16,61 @@ import { KpiCounts } from './useTlsOverview';
  * cards elsewhere in the plugin; a donut sits inside the first card
  * for the health breakdown so the eye lands on where the mass of the
  * problem is at a glance.
+ *
+ * Colours are hardcoded hex — the PatternFly status tokens
+ * (`var(--pf-t--global--color--status--…--default)`) render muted in
+ * an SVG `stroke` context on the plugin's PF5 baseline, turning the
+ * donut into a washed-out ring. The RH design-system green/orange/red
+ * below match what the DNS Overview mockup shows.
  */
 
 const COLORS = {
-  healthy: STATUS_META.healthy.color,
-  expiring: STATUS_META.warning.color,
-  expired: STATUS_META.failing.color,
-  error: STATUS_META.unknown.color,
-  scheduled: STATUS_META.healthy.color,
-  notScheduled: STATUS_META.warning.color,
-  failed: STATUS_META.failing.color,
-  ok: STATUS_META.healthy.color,
-  unknown: STATUS_META.unknown.color,
+  healthy: '#3E8635',
+  expiring: '#F0AB00',
+  expired: '#C9190B',
+  error: '#8A8D90',
+  scheduled: '#3E8635',
+  notScheduled: '#F0AB00',
+  failed: '#C9190B',
+  ok: '#3E8635',
+  unknown: '#8A8D90',
 };
 
 interface Props {
   kpi: KpiCounts;
+  onStatusClick?: (status: 'healthy' | 'expiring' | 'expired' | 'error' | null) => void;
 }
 
-const Row: React.FC<{ label: string; value: number; color?: string }> = ({
-  label,
-  value,
-  color,
-}) => (
-  <div className="rhcl-tls-overview-kpi-row">
-    <span className="rhcl-tls-overview-kpi-swatch" style={{ background: color }} />
-    <span className="rhcl-tls-overview-kpi-row-label">{label}</span>
-    <span className="rhcl-tls-overview-kpi-row-value">{value}</span>
-  </div>
-);
+const Row: React.FC<{
+  label: string;
+  value: number;
+  color?: string;
+  onClick?: () => void;
+}> = ({ label, value, color, onClick }) => {
+  const clickable = !!onClick;
+  return (
+    <div
+      className={`rhcl-tls-overview-kpi-row${clickable ? ' rhcl-tls-overview-kpi-row--clickable' : ''}`}
+      onClick={onClick}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick!();
+              }
+            }
+          : undefined
+      }
+    >
+      <span className="rhcl-tls-overview-kpi-swatch" style={{ background: color }} />
+      <span className="rhcl-tls-overview-kpi-row-label">{label}</span>
+      <span className="rhcl-tls-overview-kpi-row-value">{value}</span>
+    </div>
+  );
+};
 
 const CardShell: React.FC<{
   title: string;
@@ -63,8 +88,10 @@ const CardShell: React.FC<{
   </Card>
 );
 
-const TLSOverviewKPICards: React.FC<Props> = ({ kpi }) => {
+const TLSOverviewKPICards: React.FC<Props> = ({ kpi, onStatusClick }) => {
   const { overall, renewal, expiringSoon, handshake } = kpi;
+  const click = (s: 'healthy' | 'expiring' | 'expired' | 'error') =>
+    onStatusClick ? () => onStatusClick(s) : undefined;
 
   const overallSegments: DonutSlice[] = [
     { label: 'Healthy', value: overall.healthy, color: COLORS.healthy },
@@ -92,10 +119,10 @@ const TLSOverviewKPICards: React.FC<Props> = ({ kpi }) => {
               strokeWidth={16}
             />
             <div className="rhcl-tls-overview-kpi-rows">
-              <Row label={`Healthy · ${pct(overall.healthy)}`} value={overall.healthy} color={COLORS.healthy} />
-              <Row label={`Expiring · ${pct(overall.expiring)}`} value={overall.expiring} color={COLORS.expiring} />
-              <Row label={`Expired · ${pct(overall.expired)}`} value={overall.expired} color={COLORS.expired} />
-              <Row label={`Error · ${pct(overall.error)}`} value={overall.error} color={COLORS.error} />
+              <Row label={`Healthy · ${pct(overall.healthy)}`} value={overall.healthy} color={COLORS.healthy} onClick={click('healthy')} />
+              <Row label={`Expiring · ${pct(overall.expiring)}`} value={overall.expiring} color={COLORS.expiring} onClick={click('expiring')} />
+              <Row label={`Expired · ${pct(overall.expired)}`} value={overall.expired} color={COLORS.expired} onClick={click('expired')} />
+              <Row label={`Error · ${pct(overall.error)}`} value={overall.error} color={COLORS.error} onClick={click('error')} />
             </div>
           </div>
         </CardShell>

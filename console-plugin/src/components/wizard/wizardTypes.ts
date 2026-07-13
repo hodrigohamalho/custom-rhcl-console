@@ -78,22 +78,56 @@ export const RATE_LIMIT_SCOPES: RateLimitScopeOption[] = [
   },
 ];
 
+/**
+ * Backend pool entry. The wizard used to configure a single service
+ * (namespace/name/port/protocol at the top level of WizardState); it
+ * now maintains a list so operators can express weighted split
+ * (canary / blue-green), cross-namespace fanout, and per-path
+ * routing. Each entry has a stable local `id` — never rendered in
+ * YAML — that RouteRule uses to pin a rule to a specific subset of
+ * the pool.
+ */
+export interface BackendPoolEntry {
+  id: string;
+  namespace: string;
+  name: string;
+  port: number | null;
+  protocol: 'HTTP' | 'HTTPS' | 'GRPC';
+  /** Relative weight in the split. Not normalised in state — manifest
+   *  generation divides by the sum so `[100, 100]` renders as 50/50
+   *  and `[80, 20]` renders as 80/20. */
+  weight: number;
+}
+
 export interface RouteRule {
   id: string;
   method: string; // 'ANY' | 'GET' | ...
   path: string;
   /** PathPrefix vs Exact */
   matchType: 'PathPrefix' | 'Exact';
+  /**
+   * When `undefined` or empty: the rule uses the ENTIRE backend pool
+   * with its declared weights (default weighted-split behaviour).
+   * When set: only the referenced pool entries serve this rule —
+   * enables "/api/v1 → svc-a" / "/api/v2 → svc-b" per-path routing.
+   * Entries not present in the pool anymore are dropped silently.
+   */
+  backendIds?: string[];
 }
 
 export interface WizardState {
   template: TemplateId | null;
 
-  // Step 2 — Backend
+  // Step 2 — Backends. Pool of one or more services the HTTPRoute
+  // will target. When >1 entry, the manifest emits a weighted split
+  // on every rule that hasn't overridden it via RouteRule.backendIds.
+  backends: BackendPoolEntry[];
+  /** Backwards-compat mirror of `backends[0].namespace` — kept so the
+   *  many places that read `state.namespace` (Gateway defaults, DNS
+   *  suffix inference, APIProduct namespace, slug derivation) can
+   *  continue to compile while the migration lands. Updated by the
+   *  patch() layer whenever backends[0] changes. */
   namespace: string;
-  serviceName: string;
-  servicePort: number | null;
-  protocol: 'HTTP' | 'HTTPS' | 'GRPC';
 
   // Step 3 — Gateway
   /** true = attach to an existing Gateway; false = create a new one. */
@@ -111,6 +145,17 @@ export interface WizardState {
 
   // Step 5 — Security
   authMode: AuthMode;
+  /**
+   * Where API-key auth expects the key on the wire. Kuadrant's
+   * AuthPolicy supports both:
+   *   - "header" → \`credentials.customHeader.name: <apiKeyHeader>\`
+   *   - "query"  → \`credentials.queryString.name: <apiKeyHeader>\`
+   * Header is the default and matches every other integration in the
+   * plugin (test-key modal, wizard smoke-test); query is what CDN /
+   * frontend-only clients typically need when they can't customise
+   * headers.
+   */
+  apiKeyCredentialSource: 'header' | 'query';
   apiKeyHeader: string;
   jwtIssuer: string;
   jwtAudience: string;
@@ -149,6 +194,18 @@ export interface WizardState {
   openApiUrl: string;
   approvalMode: 'AUTOMATIC' | 'MANUAL';
   visibility: 'PUBLIC' | 'INTERNAL';
+
+  // Step 8 — Review / test key. When authMode === 'api-key', an
+  // optional Secret is emitted with a random 32-byte URL-safe base64
+  // value labeled to be picked up by the wizard's AuthPolicy
+  // selector. Populates the success screen's curl example with the
+  // literal key so the operator can paste + run without a second trip
+  // to the developer portal.
+  generateTestApiKey: boolean;
+  /** The value used for both the Secret and the success-screen curl.
+   *  Generated once via `crypto.getRandomValues` when the operator
+   *  enables the toggle so switching pages doesn't churn a new key. */
+  testApiKeyValue: string;
 }
 
 export const STEP_IDS = [
@@ -179,14 +236,24 @@ export function newRouteId(): string {
   seq += 1;
   return `r${seq}`;
 }
+let bseq = 0;
+export function newBackendId(): string {
+  bseq += 1;
+  return `b${bseq}`;
+}
+
+/** Convenience — the first backend, used everywhere we still need to
+ *  answer "which service is this API published against?" in singular
+ *  terms (slug derivation, DNS suffix, APIProduct namespace, etc.). */
+export function primaryBackend(state: WizardState): BackendPoolEntry | null {
+  return state.backends[0] || null;
+}
 
 export function defaultState(): WizardState {
   return {
     template: null,
+    backends: [],
     namespace: '',
-    serviceName: '',
-    servicePort: null,
-    protocol: 'HTTP',
     useExistingGateway: true,
     existingGatewayName: '',
     existingGatewayNamespace: '',
@@ -197,6 +264,7 @@ export function defaultState(): WizardState {
     tlsEnabled: true,
     routes: [{ id: newRouteId(), method: 'ANY', path: '/', matchType: 'PathPrefix' }],
     authMode: 'api-key',
+    apiKeyCredentialSource: 'header',
     apiKeyHeader: 'api-key',
     jwtIssuer: '',
     jwtAudience: '',
@@ -223,7 +291,28 @@ export function defaultState(): WizardState {
     openApiUrl: '',
     approvalMode: 'MANUAL',
     visibility: 'PUBLIC',
+    generateTestApiKey: true,
+    testApiKeyValue: '',
   };
+}
+
+/**
+ * URL-safe base64 of 32 random bytes, stripped of padding — good
+ * enough for a smoke-test key (matches what Kuadrant devportal picks
+ * for provisioned APIKey Secrets). Uses the Web Crypto API; falls back
+ * to `Math.random()` when unavailable so unit-testing environments
+ * without a crypto shim don't blow up.
+ */
+export function generateApiKeyValue(): string {
+  const bytes = new Uint8Array(32);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i++) bytes[i] = Math.floor(Math.random() * 256);
+  }
+  let s = '';
+  for (const b of bytes) s += String.fromCharCode(b);
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
 /**
@@ -366,7 +455,13 @@ export interface ReadinessItem {
 }
 
 export const READINESS: ReadinessItem[] = [
-  { key: 'backend', label: 'Backend', done: (s) => !!(s.namespace && s.serviceName && s.servicePort) },
+  {
+    key: 'backend',
+    label: 'Backend',
+    done: (s) =>
+      s.backends.length > 0 &&
+      s.backends.every((b) => !!(b.namespace && b.name && b.port)),
+  },
   {
     key: 'gateway',
     label: 'Gateway',
@@ -374,7 +469,23 @@ export const READINESS: ReadinessItem[] = [
       s.useExistingGateway ? !!s.existingGatewayName : !!(s.gatewayName && s.hostname),
   },
   { key: 'route', label: 'Route', done: (s) => s.routes.length > 0 && s.routes.every((r) => !!r.path) },
-  { key: 'auth', label: 'Authentication', done: (s) => s.authMode !== 'anonymous' || true, applicable: () => true },
+  {
+    key: 'auth',
+    label: 'Authentication',
+    // Anonymous IS a valid explicit authentication decision now — the
+    // wizard emits an explicit AuthPolicy with `authentication.public.
+    // anonymous: {}` to override any deny-all on the parent Gateway. So
+    // every authMode counts as "done" as long as the required knob for
+    // that mode has been filled.
+    done: (s) => {
+      if (s.authMode === 'anonymous') return true;
+      if (s.authMode === 'api-key') return true;
+      if (s.authMode === 'jwt') return !!s.jwtIssuer;
+      if (s.authMode === 'oidc') return !!s.oidcDiscoveryUrl;
+      return false;
+    },
+    applicable: () => true,
+  },
   {
     key: 'ratelimit',
     label: 'Rate Limit',
@@ -398,9 +509,12 @@ export function readinessPct(s: WizardState): number {
   return Math.round((done / applicable.length) * 100);
 }
 
-/** Slug used as metadata.name for the generated resources. */
+/** Slug used as metadata.name for the generated resources. Falls back
+ *  to the first backend's service name when the operator hasn't typed
+ *  a display name yet. */
 export function apiSlug(s: WizardState): string {
-  const base = (s.displayName || s.serviceName || 'my-api')
+  const primary = primaryBackend(s);
+  const base = (s.displayName || primary?.name || 'my-api')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
