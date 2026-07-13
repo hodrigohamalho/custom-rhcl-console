@@ -249,6 +249,7 @@
   "Loading…": "Loading…",
   "Managed zone": "Managed zone",
   "Message": "Message",
+  "Metadata": "Metadata",
   "Method": "Method",
   "Metrics": "Metrics",
   "Metrics are unavailable": {
@@ -491,7 +492,9 @@
   "Service not found in the cluster via live watch": "Service not found in the cluster via live watch",
   "Service not found in the cluster via live watch.": "Service not found in the cluster via live watch.",
   "Service type": "Service type",
+  "Security": "Security",
   "Service unavailable": "Service unavailable",
+  "Show Kubernetes metadata": "Show Kubernetes metadata",
   "Service · {{ns}}/{{n}}": "Service · {{ns}}/{{n}}",
   "Services (gRPC)": "Services (gRPC)",
   "Set `costBudget` in the plugin ConfigMap to track monthly budget projection.": "Set `costBudget` in the plugin ConfigMap to track monthly budget projection.",

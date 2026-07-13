@@ -2,7 +2,7 @@ import * as React from 'react';
 // `useParams` from v5-compat (reads the v6 context populated by the
 // host's `<CompatRouter>`); `Link` from v5 `react-router-dom`. See
 // GatewayDetailPage for the full reasoning.
-import { useParams } from 'react-router-dom-v5-compat';
+import { useParams, useSearchParams } from 'react-router-dom-v5-compat';
 import { Link } from 'react-router-dom';
 import {
   PageSection,
@@ -10,10 +10,6 @@ import {
   Tabs,
   Tab,
   TabTitleText,
-  DescriptionList,
-  DescriptionListGroup,
-  DescriptionListTerm,
-  DescriptionListDescription,
   Card,
   CardTitle,
   CardBody,
@@ -26,14 +22,17 @@ import {
   Label,
   CodeBlock,
   CodeBlockCode,
+  Flex,
+  FlexItem,
+  Icon,
 } from '@patternfly/react-core';
+import { ShieldAltIcon } from '@patternfly/react-icons';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import yaml from 'js-yaml';
 import { HTTPRouteGVK } from '../../models';
 import { HTTPRoute, K8sCondition } from '../../types';
-import { hostnameToURL } from '../../utils/hostname';
 import StatusLabel from '../common/StatusLabel';
 import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 import { OpenInTempoButton } from '../common/OpenInTempoButton';
@@ -42,12 +41,59 @@ import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
 import { EffectivePolicyStack } from '../policies/EffectivePolicyStack';
 import { BackendsTab } from './backends/BackendsTab';
+import { usePrometheusTraffic } from '../../hooks/usePrometheusTraffic';
+import { useGrafanaLink } from '../../utils/grafana';
+import {
+  HTTPRouteDetailsCard,
+  HTTPRouteStatusCard,
+  HTTPRouteSecuritySummaryCard,
+  HTTPRouteTrafficSummaryCard,
+} from './security/SummaryCards';
+import { BackendRefsCard } from './security/BackendRefsCard';
+import { SecurityDetailsCard } from './security/SecurityDetailsCard';
+import { SecurityChecksCard } from './security/SecurityChecksCard';
+import { RouteEventsCard } from './security/RouteEventsCard';
+import { RouteSecurityTab } from './security/RouteSecurityTab';
+import { useHTTPRouteSecurityPosture } from './security/useHTTPRouteSecurityPosture';
+import { useHTTPRouteHeadersProber } from './security/useHTTPRouteHeadersProber';
+import { useHTTPRouteEvents } from './security/useHTTPRouteEvents';
+import { SecurityPostureBadge } from './security/SecurityAtoms';
 import '../../styles/plugin-glass.css';
+
+// URL ?tab= codes → tab index. Kept stable so links from other cards
+// (e.g. Security Summary → "Open Security tab") work.
+const TAB_INDEX: Record<string, number> = {
+  details: 0,
+  policies: 1,
+  backends: 2,
+  'effective-policy-stack': 3,
+  security: 4,
+  metrics: 5,
+  yaml: 6,
+};
+const INDEX_TO_TAB: Record<number, string> = Object.fromEntries(
+  Object.entries(TAB_INDEX).map(([k, v]) => [v, k]),
+);
 
 const HTTPRouteDetailPage: React.FC = () => {
   const { ns, name } = useParams<{ ns: string; name: string }>();
   const { t } = useTranslation('plugin__custom-rhcl-console');
-  const [activeTab, setActiveTab] = React.useState(0);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = TAB_INDEX[searchParams.get('tab') || ''] ?? 0;
+  const [activeTab, setActiveTab] = React.useState(initialTab);
+
+  const setTab = React.useCallback(
+    (idx: number) => {
+      setActiveTab(idx);
+      const key = INDEX_TO_TAB[idx];
+      if (key) {
+        const params = new URLSearchParams(searchParams);
+        params.set('tab', key);
+        setSearchParams(params, { replace: true });
+      }
+    },
+    [searchParams, setSearchParams],
+  );
 
   // Same SDK 4.21 quirk: single-resource watch returns undefined forever
   // on this cluster. Listing in the namespace and finding by name works.
@@ -60,6 +106,52 @@ const HTTPRouteDetailPage: React.FC = () => {
     () => (routes || []).find((r) => r.metadata?.name === name),
     [routes, name],
   );
+
+  const parentRef = route?.spec?.parentRefs?.[0];
+  const parentGatewayName = parentRef?.name || '';
+  const parentGatewayNamespace = parentRef?.namespace || ns || '';
+
+  // Live headers probe — kept as its own hook so the summary card can
+  // read the snapshot AND the deep card can trigger a fresh probe.
+  const {
+    configured: headersConfigured,
+    loading: headersLoading,
+    error: headersError,
+    snapshot: headersSnapshot,
+    runProbe: runHeadersProbe,
+  } = useHTTPRouteHeadersProber();
+
+  // Normalized security posture — single source of truth. Everything
+  // downstream (summary card, checks table, security tab) reads this.
+  const {
+    loaded: postureLoaded,
+    summary,
+    operational,
+  } = useHTTPRouteSecurityPosture({
+    route,
+    routeNamespace: ns || '',
+    parentGatewayName,
+    parentGatewayNamespace,
+    headersProbe: headersSnapshot || undefined,
+  });
+
+  // Traffic for the summary card.
+  const { data: trafficData, loaded: trafficLoaded } = usePrometheusTraffic(
+    'HTTPRoute',
+    name || '',
+    ns || '',
+    60000,
+    '5m',
+  );
+
+  const grafanaLink = useGrafanaLink('api-overview', { httproute: `${ns}.${name}` });
+  const openGrafana = React.useCallback(() => {
+    if (grafanaLink.available && grafanaLink.url) {
+      window.open(grafanaLink.url, '_blank', 'noopener,noreferrer');
+    }
+  }, [grafanaLink.available, grafanaLink.url]);
+
+  const events = useHTTPRouteEvents(route, summary.effectiveStack);
 
   // Keep the plugin surface even during load, otherwise the page flashes
   // black on the Console dark theme before HTTPRoute data arrives.
@@ -74,8 +166,18 @@ const HTTPRouteDetailPage: React.FC = () => {
   }
 
   const hostnames = route.spec?.hostnames || [];
-  const parentRef = route.spec?.parentRefs?.[0];
   const parentConditions = route.status?.parents?.[0]?.conditions;
+  const primaryHostname = hostnames[0];
+  const defaultProbeUrl = primaryHostname ? `https://${primaryHostname}/` : '';
+
+  const requestRatePerMin = trafficData.requestRate5m != null ? trafficData.requestRate5m * 60 : undefined;
+  const errorPct =
+    trafficData.rate5xx != null && trafficData.requestRate5m
+      ? (trafficData.rate5xx / Math.max(trafficData.requestRate5m, 0.0001)) * 100
+      : trafficData.successRate != null
+      ? 100 - trafficData.successRate * 100
+      : undefined;
+  const p95 = trafficData.latencyP95 != null ? Math.round(trafficData.latencyP95) : undefined;
 
   return (
     <div className="rhcl-plugin-root">
@@ -88,27 +190,35 @@ const HTTPRouteDetailPage: React.FC = () => {
             {ns}/{name}
           </BreadcrumbItem>
         </Breadcrumb>
-        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-          <Title headingLevel="h1">
-            {name} <StatusLabel conditions={parentConditions} />
-          </Title>
+        <div
+          style={{
+            marginTop: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+            flexWrap: 'wrap',
+          }}
+        >
+          <Flex spaceItems={{ default: 'spaceItemsSm' }} alignItems={{ default: 'alignItemsCenter' }}>
+            <FlexItem>
+              <Title headingLevel="h1">{name}</Title>
+            </FlexItem>
+            <FlexItem>
+              <StatusLabel conditions={parentConditions} />
+            </FlexItem>
+            {postureLoaded && (
+              <FlexItem>
+                <SecurityPostureBadge posture={summary.posture} reason={summary.postureReason} />
+              </FlexItem>
+            )}
+          </Flex>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {/* Istio's route_name label is `<ns>.<httproute>.<rule_idx>`.
-                The dashboard's `httproute` template var has regex
-                `/(.+)\.[0-9]+/` that strips the `.<idx>` suffix, so the
-                dropdown lists values shaped as `<ns>.<httproute>` — we
-                send the same shape here so the Grafana selector lands on
-                a real option. PromQL panels re-append `..+` themselves
-                to match every rule. */}
             <OpenInGrafanaButton
               dashboard="api-overview"
               label={t('Traffic')}
               vars={{ httproute: `${ns}.${name}` }}
             />
-            {/* Tempo Jaeger UI pre-filtered to spans that hit this route on
-                the gateway. service.name=rhcl-gateway lands you on the
-                gateway-level spans; from there the trace tree drills into
-                wasm-shim/limitador/banking-api children. */}
             <OpenInTempoButton
               label={t('Traces')}
               vars={{
@@ -131,95 +241,99 @@ const HTTPRouteDetailPage: React.FC = () => {
       <PageSection>
         <Tabs
           activeKey={activeTab}
-          onSelect={(_e, idx) => setActiveTab(idx as number)}
+          onSelect={(_e, idx) => setTab(idx as number)}
           aria-label={t('Details')}
         >
+          {/* ------ Details tab ------ */}
           <Tab eventKey={0} title={<TabTitleText>{t('Details')}</TabTitleText>}>
             <Grid hasGutter style={{ marginTop: 16 }}>
-              <GridItem span={6}>
-                <Card>
-                  <CardTitle>{t('Details')}</CardTitle>
-                  <CardBody>
-                    <DescriptionList isHorizontal>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Name')}</DescriptionListTerm>
-                        <DescriptionListDescription>{name}</DescriptionListDescription>
-                      </DescriptionListGroup>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Namespace')}</DescriptionListTerm>
-                        <DescriptionListDescription>{ns}</DescriptionListDescription>
-                      </DescriptionListGroup>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Parent gateway')}</DescriptionListTerm>
-                        <DescriptionListDescription>
-                          {parentRef ? (
-                            <Link
-                              to={`/connectivity-link/gateways/${parentRef.namespace || ns}/${parentRef.name}`}
-                            >
-                              {parentRef.name}
-                            </Link>
-                          ) : (
-                            '-'
-                          )}
-                        </DescriptionListDescription>
-                      </DescriptionListGroup>
-                      <DescriptionListGroup>
-                        <DescriptionListTerm>{t('Hostnames')}</DescriptionListTerm>
-                        <DescriptionListDescription>
-                          {hostnames.length > 0 ? (
-                            hostnames.map((h) => (
-                              <div key={h}>
-                                <a
-                                  href={hostnameToURL(h)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {h}
-                                </a>
-                              </div>
-                            ))
-                          ) : (
-                            '-'
-                          )}
-                        </DescriptionListDescription>
-                      </DescriptionListGroup>
-                    </DescriptionList>
-                  </CardBody>
-                </Card>
+              {/* Top summary row: 4 cards */}
+              <GridItem xl={3} md={6} span={12}>
+                <HTTPRouteDetailsCard
+                  route={route}
+                  parentGatewayName={parentGatewayName}
+                  parentGatewayNamespace={parentGatewayNamespace}
+                />
               </GridItem>
-              <GridItem span={6}>
-                <Card>
-                  <CardTitle>{t('Backend refs')}</CardTitle>
-                  <CardBody>
-                    <Table aria-label={t('Backend refs')} variant="compact">
-                      <Thead>
-                        <Tr>
-                          <Th>Rule</Th>
-                          <Th>{t('Method')}</Th>
-                          <Th>{t('Path pattern')}</Th>
-                          <Th>Backend</Th>
-                          <Th>Port</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {(route.spec?.rules || []).flatMap((rule, ri) =>
-                          (rule.backendRefs || []).map((backend, bi) => (
-                            <Tr key={`${ri}-${bi}`}>
-                              <Td>{ri}</Td>
-                              <Td>{rule.matches?.[0]?.method || '*'}</Td>
-                              <Td>{rule.matches?.[0]?.path?.value || '/'}</Td>
-                              <Td>{backend.name}</Td>
-                              <Td>{backend.port || '-'}</Td>
-                            </Tr>
-                          )),
-                        )}
-                      </Tbody>
-                    </Table>
-                  </CardBody>
-                </Card>
+              <GridItem xl={3} md={6} span={12}>
+                <HTTPRouteStatusCard operational={operational} />
               </GridItem>
+              <GridItem xl={3} md={6} span={12}>
+                <HTTPRouteSecuritySummaryCard
+                  summary={summary}
+                  onNavigateToSecurityTab={() => setTab(TAB_INDEX['security'])}
+                />
+              </GridItem>
+              <GridItem xl={3} md={6} span={12}>
+                <HTTPRouteTrafficSummaryCard
+                  requestsPerMin={requestRatePerMin}
+                  errorPct={errorPct}
+                  p95LatencyMs={p95}
+                  loaded={trafficLoaded}
+                  onOpenGrafana={openGrafana}
+                />
+              </GridItem>
+
+              {/* Two-column body: Backend Refs + Events | Security Details + Checks */}
+              <GridItem xl={5} span={12}>
+                <Grid hasGutter>
+                  <GridItem span={12}>
+                    <BackendRefsCard route={route} />
+                  </GridItem>
+                  <GridItem span={12}>
+                    <RouteEventsCard events={events} />
+                  </GridItem>
+                </Grid>
+              </GridItem>
+              <GridItem xl={7} span={12}>
+                <Grid hasGutter>
+                  <GridItem span={12}>
+                    <SecurityDetailsCard
+                      summary={summary}
+                      headersLoading={headersLoading}
+                      headersConfigured={headersConfigured}
+                      headersError={headersError}
+                      onRunHeaderProbe={() => runHeadersProbe(defaultProbeUrl)}
+                      routeName={name || ''}
+                      routeNamespace={ns || ''}
+                    />
+                  </GridItem>
+                  <GridItem span={12}>
+                    <SecurityChecksCard
+                      checks={summary.checks}
+                      onReRun={() => runHeadersProbe(defaultProbeUrl)}
+                    />
+                  </GridItem>
+                </Grid>
+              </GridItem>
+
+              {/* Footer metadata (collapsed by default via <details>) */}
               <GridItem span={12}>
-                <ConditionsCard conditions={parentConditions} />
+                <Card>
+                  <CardTitle>{t('Metadata')}</CardTitle>
+                  <CardBody>
+                    <details>
+                      <summary style={{ cursor: 'pointer', fontSize: 13 }}>
+                        {t('Show Kubernetes metadata')}
+                      </summary>
+                      <div style={{ marginTop: 8, fontSize: 13 }}>
+                        <div>UID: <code>{route.metadata?.uid || '-'}</code></div>
+                        <div>Resource version: <code>{route.metadata?.resourceVersion || '-'}</code></div>
+                        <div>Created: {route.metadata?.creationTimestamp || '-'}</div>
+                        {route.metadata?.labels && (
+                          <div style={{ marginTop: 8 }}>
+                            <strong>Labels:</strong>{' '}
+                            {Object.entries(route.metadata.labels).map(([k, v]) => (
+                              <Label key={k} isCompact style={{ marginRight: 4 }}>
+                                {k}={v}
+                              </Label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  </CardBody>
+                </Card>
               </GridItem>
             </Grid>
           </Tab>
@@ -245,19 +359,47 @@ const HTTPRouteDetailPage: React.FC = () => {
               <EffectivePolicyStack
                 routeName={name || ''}
                 routeNamespace={ns || ''}
-                parentGatewayName={parentRef?.name || ''}
-                parentGatewayNamespace={parentRef?.namespace || ns || ''}
+                parentGatewayName={parentGatewayName}
+                parentGatewayNamespace={parentGatewayNamespace}
               />
             </div>
           </Tab>
 
-          <Tab eventKey={4} title={<TabTitleText>{t('Metrics')}</TabTitleText>}>
+          <Tab
+            eventKey={4}
+            title={
+              <TabTitleText>
+                <Flex spaceItems={{ default: 'spaceItemsXs' }} alignItems={{ default: 'alignItemsCenter' }}>
+                  <FlexItem>
+                    <Icon size="sm"><ShieldAltIcon /></Icon>
+                  </FlexItem>
+                  <FlexItem>{t('Security')}</FlexItem>
+                </Flex>
+              </TabTitleText>
+            }
+          >
+            <RouteSecurityTab
+              route={route}
+              summary={summary}
+              effectiveStack={summary.effectiveStack}
+              headers={{
+                configured: headersConfigured,
+                loading: headersLoading,
+                error: headersError,
+                onRun: runHeadersProbe,
+              }}
+              defaultProbeUrl={defaultProbeUrl}
+              onReRun={() => runHeadersProbe(defaultProbeUrl)}
+            />
+          </Tab>
+
+          <Tab eventKey={5} title={<TabTitleText>{t('Metrics')}</TabTitleText>}>
             <div style={{ marginTop: 16 }}>
               <TrafficPanel kind="HTTPRoute" name={name || ''} namespace={ns || ''} />
             </div>
           </Tab>
 
-          <Tab eventKey={5} title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+          <Tab eventKey={6} title={<TabTitleText>{t('YAML')}</TabTitleText>}>
             <div style={{ marginTop: 16 }}>
               <CodeBlock>
                 <CodeBlockCode>
@@ -272,11 +414,12 @@ const HTTPRouteDetailPage: React.FC = () => {
   );
 };
 
-const ConditionsCard: React.FC<{ conditions?: K8sCondition[] }> = ({ conditions }) => {
+// Kept for backward-compat: the old Details tab previously exposed a full
+// Conditions table. Not used by the new layout, but callers may still import
+// ConditionsCard so we keep the export.
+export const ConditionsCard: React.FC<{ conditions?: K8sCondition[] }> = ({ conditions }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
-
   if (!conditions || conditions.length === 0) return null;
-
   return (
     <Card>
       <CardTitle>{t('Status')}</CardTitle>
