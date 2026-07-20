@@ -98,6 +98,7 @@
       "APIKeysListPage": "./components/api-keys/APIKeysListPage",
       "PlansListPage": "./components/plans/PlansListPage",
       "CostMonitoringPage": "./components/cost/CostMonitoringPage",
+      "SettingsPage": "./components/settings/SettingsPage",
       "CreateApiWizard": "./components/wizard/CreateApiWizard",
       "DeveloperPortalRedirect": "./components/developer-portal/DeveloperPortalRedirect",
       "developerPortalFlag": "./feature-flags/developerPortalFlag",

@@ -209,6 +209,27 @@
     }
   },
   {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "connectivity-link-settings",
+      "name": "%plugin__custom-rhcl-console~Settings%",
+      "href": "/connectivity-link/settings",
+      "perspective": "admin",
+      "section": "connectivity-link",
+      "insertAfter": "connectivity-link-cost"
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/connectivity-link/settings",
+      "component": {
+        "$codeRef": "SettingsPage"
+      }
+    }
+  },
+  {
     "type": "console.flag/hookProvider",
     "properties": {
       "handler": {
