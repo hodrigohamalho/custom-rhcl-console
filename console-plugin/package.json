@@ -79,7 +79,7 @@
   "consolePlugin": {
     "name": "custom-rhcl-console",
     "version": "0.1.0",
-    "displayName": "Connectivity Link",
+    "displayName": "Kuadrant Console",
     "description": "Custom console for Red Hat Connectivity Link providing operational visibility into Gateways, HTTPRoutes, policies, and API Products.",
     "exposedModules": {
       "OverviewPage": "./components/overview/OverviewPage",

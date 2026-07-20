@@ -248,7 +248,11 @@ async function discover(product: APIProduct): Promise<DeletableRef[]> {
       model: toModel(SecretGVK, 'secrets', true) as never,
       queryParams: {
         ns: productNs,
-        labelSelector: `app=${productName}-apikey`,
+        // MUST be a Selector object, not a string: the SDK's toRequirements()
+        // treats a string as an "old-format" selector and iterates its
+        // characters (Object.keys("app=…")), producing a garbage selector
+        // ("0=a,1=p,3==,…") the API server rejects with a 400. See k8s-utils.
+        labelSelector: { matchLabels: { app: `${productName}-apikey` } },
       },
     });
     const items = Array.isArray(list) ? list : (list as { items?: K8sResourceCommon[] }).items || [];
