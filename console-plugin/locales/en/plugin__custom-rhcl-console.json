@@ -573,6 +573,7 @@
   "Unauthorized": "Unauthorized",
   "Unlimited": "Unlimited",
   "Unresolved": "Unresolved",
+  "Showing {{shown}} of {{total}}": "Showing {{shown}} of {{total}}",
   "Usage trend": "Usage trend",
   "Used by API Products": "Used by API Products",
   "Used by {{n}} rule(s) in this HTTPRoute": "Used by {{n}} rule(s) in this HTTPRoute",
