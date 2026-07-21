@@ -42,13 +42,16 @@ import {
   LockIcon,
   DollarSignIcon,
   PlugIcon,
+  PencilAltIcon,
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
 import {
   useK8sWatchResource,
+  useAccessReview,
   K8sResourceCommon,
   consoleFetch,
 } from '@openshift-console/dynamic-plugin-sdk';
+import SettingsEditModal from './SettingsEditModal';
 import {
   usePluginConfig,
   parseCostPricing,
@@ -254,6 +257,17 @@ const SettingsPage: React.FC = () => {
     isList: false,
   });
   const cmExists = cmLoaded && !cmError && !!cm?.metadata?.name;
+
+  // Editing writes to the ConfigMap, so gate the affordance on the real
+  // permission instead of letting the user fill in a form that 403s on save.
+  const [canEditConfig] = useAccessReview({
+    group: '',
+    resource: 'configmaps',
+    verb: 'patch',
+    namespace: CONFIGMAP_NAMESPACE,
+    name: CONFIGMAP_NAME,
+  });
+  const [editOpen, setEditOpen] = React.useState(false);
 
   const [runKey, setRunKey] = React.useState(() => Date.now());
   const [validatedAt, setValidatedAt] = React.useState(() => Date.now());
@@ -534,12 +548,25 @@ const SettingsPage: React.FC = () => {
                   {t('Last validation: {{when}}', { when: relTime(validatedAt) })}
                 </span>
               </FlexItem>
-              <FlexItem><Label color="grey" isCompact icon={<LockIcon />}>{t('Read only')}</Label></FlexItem>
+              {!canEditConfig && (
+                <FlexItem>
+                  <Tooltip content={t('You do not have permission to patch the plugin ConfigMap.')}>
+                    <Label color="grey" isCompact icon={<LockIcon />}>{t('Read only')}</Label>
+                  </Tooltip>
+                </FlexItem>
+              )}
               <FlexItem>
                 <Button variant="secondary" component="a" href={CONFIGMAP_EDIT_URL} target="_blank" rel="noopener noreferrer" icon={<ExternalLinkAltIcon />} iconPosition="end">
                   {t('Open ConfigMap')}
                 </Button>
               </FlexItem>
+              {canEditConfig && (
+                <FlexItem>
+                  <Button variant="secondary" onClick={() => setEditOpen(true)} icon={<PencilAltIcon />}>
+                    {t('Edit configuration')}
+                  </Button>
+                </FlexItem>
+              )}
               <FlexItem>
                 <Button variant="primary" onClick={runValidation} icon={<SyncAltIcon />}>
                   {t('Run Validation')}
@@ -666,9 +693,27 @@ const SettingsPage: React.FC = () => {
       {/* Section 5 — Advanced (collapsed) */}
       <PageSection>
         <ExpandableSection toggleText={t('Advanced — raw configuration')} isIndented>
-          <AdvancedSection config={config} cmExists={cmExists} pricing={pricing} currency={currency} />
+          <AdvancedSection
+            config={config}
+            cmExists={cmExists}
+            pricing={pricing}
+            currency={currency}
+            canEdit={canEditConfig}
+            onEdit={() => setEditOpen(true)}
+          />
         </ExpandableSection>
       </PageSection>
+
+      {/* Rendered at page scope, not inside a menu/section, so closing the
+          surrounding UI can't unmount it mid-edit. */}
+      <SettingsEditModal
+        isOpen={editOpen}
+        onClose={() => setEditOpen(false)}
+        config={config}
+        cm={cmExists ? (cm as { data?: Record<string, string> } & K8sResourceCommon) : undefined}
+        namespace={CONFIGMAP_NAMESPACE}
+        name={CONFIGMAP_NAME}
+      />
     </div>
   );
 };
@@ -722,7 +767,9 @@ const AdvancedSection: React.FC<{
   cmExists: boolean;
   pricing: CostPricing;
   currency: string;
-}> = ({ config, cmExists, pricing, currency }) => {
+  canEdit: boolean;
+  onEdit: () => void;
+}> = ({ config, cmExists, pricing, currency, canEdit, onEdit }) => {
   const { t } = useTranslation('plugin__custom-rhcl-console');
   const entries = Object.entries(config as Record<string, unknown>).sort(([a], [b]) => a.localeCompare(b));
   const tiers = Object.entries(pricing).sort(([a], [b]) => a.localeCompare(b));
@@ -739,9 +786,20 @@ const AdvancedSection: React.FC<{
               <DescriptionListGroup><DescriptionListTerm>{t('Status')}</DescriptionListTerm><DescriptionListDescription>{cmExists ? <Label color="green" isCompact>{t('Present')}</Label> : <Label color="orange" isCompact>{t('Missing — using defaults')}</Label>}</DescriptionListDescription></DescriptionListGroup>
               <DescriptionListGroup><DescriptionListTerm>{t('Plugin Version')}</DescriptionListTerm><DescriptionListDescription><code>{PLUGIN_VERSION}</code></DescriptionListDescription></DescriptionListGroup>
             </DescriptionList>
-            <Button variant="link" isInline component="a" href={CONFIGMAP_EDIT_URL} target="_blank" rel="noopener noreferrer" icon={<ExternalLinkAltIcon />} iconPosition="end" style={{ marginTop: 12 }}>
-              {t('Edit ConfigMap in OpenShift Console')}
-            </Button>
+            <Flex spaceItems={{ default: 'spaceItemsMd' }} style={{ marginTop: 12 }}>
+              {canEdit && (
+                <FlexItem>
+                  <Button variant="link" isInline onClick={onEdit} icon={<PencilAltIcon />}>
+                    {t('Edit these values')}
+                  </Button>
+                </FlexItem>
+              )}
+              <FlexItem>
+                <Button variant="link" isInline component="a" href={CONFIGMAP_EDIT_URL} target="_blank" rel="noopener noreferrer" icon={<ExternalLinkAltIcon />} iconPosition="end">
+                  {t('Open raw YAML')}
+                </Button>
+              </FlexItem>
+            </Flex>
           </CardBody>
         </Card>
       </GridItem>
