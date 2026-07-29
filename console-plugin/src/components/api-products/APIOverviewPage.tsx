@@ -31,8 +31,7 @@ import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { APIProductGVK, HTTPRouteGVK } from '../../models';
 import { APIProduct, HTTPRoute } from '../../types';
-import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
-import { OpenInTempoButton } from '../common/OpenInTempoButton';
+import ObservabilityMenu from '../common/ObservabilityMenu';
 import { hostnameToURL } from '../../utils/hostname';
 import PlansCards from './PlansCards';
 import APIKeysTable from './APIKeysTable';
@@ -205,35 +204,17 @@ const APIOverviewContent: React.FC<{
               regex that already strips the trailing `.<rule_idx>` from the
               Istio route_name label, so we send `<ns>.<httproute>` (without
               a `.*` suffix) — that's the exact shape the dropdown lists. */}
+          {/* One consolidated Observability menu (Grafana traffic/consumers/
+              costs + Tempo traces), scoped to this API Product's HTTPRoute —
+              same format the Gateway, HTTPRoute and MCP Server pages use. The
+              dashboard template var strips the trailing `.<rule_idx>`, so we
+              send `<ns>.<httproute>`. */}
           {targetRef?.kind === 'HTTPRoute' && targetRef?.name && (
             <FlexItem>
-              <OpenInGrafanaButton
-                dashboard="api-overview"
-                label={t('Traffic')}
-                variant="tertiary"
-                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}` }}
-              />
-            </FlexItem>
-          )}
-          {targetRef?.kind === 'HTTPRoute' && targetRef?.name && (
-            <FlexItem>
-              <OpenInGrafanaButton
-                dashboard="api-consumers"
-                label={t('Consumers')}
-                variant="tertiary"
-                vars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}` }}
-              />
-            </FlexItem>
-          )}
-          {targetRef?.kind === 'HTTPRoute' && targetRef?.name && (
-            <FlexItem>
-              {/* Tempo search filtered to the gateway service + http.route
-                  tag. From there the trace tree drills into wasm-shim,
-                  limitador, and the auto-instrumented banking-api spans. */}
-              <OpenInTempoButton
-                label={t('Traces')}
-                variant="tertiary"
-                vars={{
+              <ObservabilityMenu
+                grafanaVars={{ httproute: `${targetRef.namespace || ns}.${targetRef.name}` }}
+                dashboards={['api-overview', 'api-consumers', 'api-costs']}
+                tempoVars={{
                   serviceName: 'rhcl-gateway',
                   tags: { 'http.route': targetRef.name },
                   lookback: '1h',

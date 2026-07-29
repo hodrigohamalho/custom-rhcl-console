@@ -34,8 +34,7 @@ import yaml from 'js-yaml';
 import { HTTPRouteGVK } from '../../models';
 import { HTTPRoute, K8sCondition } from '../../types';
 import StatusLabel from '../common/StatusLabel';
-import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
-import { OpenInTempoButton } from '../common/OpenInTempoButton';
+import ObservabilityMenu from '../common/ObservabilityMenu';
 import TrafficPanel from '../common/TrafficPanel';
 import ResourceActionsMenu from '../common/ResourceActionsMenu';
 import { PolicyAttachmentView } from '../policies/PolicyAttachmentView';
@@ -214,14 +213,10 @@ const HTTPRouteDetailPage: React.FC = () => {
             )}
           </Flex>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <OpenInGrafanaButton
-              dashboard="api-overview"
-              label={t('Traffic')}
-              vars={{ httproute: `${ns}.${name}` }}
-            />
-            <OpenInTempoButton
-              label={t('Traces')}
-              vars={{
+            <ObservabilityMenu
+              grafanaVars={{ httproute: `${ns}.${name}` }}
+              dashboards={['api-overview', 'api-consumers', 'api-costs']}
+              tempoVars={{
                 serviceName: 'rhcl-gateway',
                 tags: { 'http.route': name || '' },
                 lookback: '1h',

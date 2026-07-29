@@ -15,22 +15,16 @@ import {
   Bullseye,
   Breadcrumb,
   BreadcrumbItem,
-  Dropdown,
-  DropdownList,
   DropdownItem,
-  MenuToggle,
-  MenuToggleElement,
-  Divider,
 } from '@patternfly/react-core';
-import { CubeIcon, ChartLineIcon, BellIcon, ExternalLinkAltIcon } from '@patternfly/react-icons';
+import { CubeIcon } from '@patternfly/react-icons';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { GatewayGVK, GatewayClassGVK } from '../../models';
 import { Gateway, GatewayClass } from '../../types';
 import StatusLabel from '../common/StatusLabel';
 import ResourceActionsMenu from '../common/ResourceActionsMenu';
-import { useGrafanaLink, GrafanaDashboard, GrafanaLink } from '../../utils/grafana';
-import { useTempoLink } from '../../utils/tempo';
+import ObservabilityMenu from '../common/ObservabilityMenu';
 import GatewayOpsDashboard from './GatewayOpsDashboard';
 import '../../styles/plugin-glass.css';
 
@@ -53,83 +47,6 @@ const MetaChip: React.FC<{ label: string; value: React.ReactNode }> = ({ label, 
     <span style={{ color: 'var(--pf-t--global--text--color--regular)', fontWeight: 600 }}>{value}</span>
   </span>
 );
-
-/**
- * Consolidated "Observability ▾" menu — folds the gateway's Grafana + Tempo
- * deep-links (previously two standalone buttons) into one secondary dropdown.
- * Each Grafana dashboard and the trace explorer render disabled when the
- * backing stack isn't installed (the hooks return `available: false`).
- */
-const ObservabilityMenu: React.FC<{ gatewayVar: string }> = ({ gatewayVar }) => {
-  const { t } = useTranslation('plugin__custom-rhcl-console');
-  const [open, setOpen] = React.useState(false);
-
-  const dashboards: { key: GrafanaDashboard; label: string; link: GrafanaLink }[] = [
-    { key: 'api-overview', label: t('Gateway traffic dashboard'), link: useGrafanaLink('api-overview', { gateway: gatewayVar }) },
-    { key: 'api-consumers', label: t('Consumer dashboard'), link: useGrafanaLink('api-consumers') },
-    { key: 'authorino', label: t('Authorino'), link: useGrafanaLink('authorino') },
-    { key: 'limitador', label: t('Limitador'), link: useGrafanaLink('limitador') },
-    { key: 'api-costs', label: t('Costs'), link: useGrafanaLink('api-costs') },
-  ];
-  const traces = useTempoLink({ serviceName: 'rhcl-gateway', lookback: '1h' });
-
-  return (
-    <Dropdown
-      isOpen={open}
-      onSelect={() => setOpen(false)}
-      onOpenChange={(o) => setOpen(o)}
-      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-        <MenuToggle
-          ref={toggleRef}
-          variant="secondary"
-          icon={<ChartLineIcon />}
-          isExpanded={open}
-          onClick={() => setOpen((o) => !o)}
-        >
-          {t('Observability')}
-        </MenuToggle>
-      )}
-    >
-      <DropdownList>
-        {dashboards.map((d) =>
-          d.link.available ? (
-            <DropdownItem
-              key={d.key}
-              icon={<ExternalLinkAltIcon />}
-              component="a"
-              href={d.link.url ?? '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {d.label}
-            </DropdownItem>
-          ) : (
-            <DropdownItem key={d.key} isDisabled isAriaDisabled icon={<ExternalLinkAltIcon />}>
-              {d.label} — {t('unavailable')}
-            </DropdownItem>
-          ),
-        )}
-        <Divider component="li" key="obs-div" />
-        {traces.available ? (
-          <DropdownItem
-            key="traces"
-            icon={<ChartLineIcon />}
-            component={(props) => <Link {...props} to={traces.url ?? '#'} />}
-          >
-            {t('Trace explorer')}
-          </DropdownItem>
-        ) : (
-          <DropdownItem key="traces" isDisabled isAriaDisabled icon={<ChartLineIcon />}>
-            {t('Trace explorer')} — {t('unavailable')}
-          </DropdownItem>
-        )}
-        <DropdownItem key="alerts" icon={<BellIcon />} component={(props) => <Link {...props} to="/monitoring/alerts" />}>
-          {t('Alerts')}
-        </DropdownItem>
-      </DropdownList>
-    </Dropdown>
-  );
-};
 
 const GatewayDetailPage: React.FC = () => {
   const { ns, name } = useParams<{ ns: string; name: string }>();
@@ -200,7 +117,14 @@ const GatewayDetailPage: React.FC = () => {
             {name} <StatusLabel conditions={gateway.status?.conditions} />
           </Title>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <ObservabilityMenu gatewayVar={grafanaGwVar} />
+            <ObservabilityMenu
+              grafanaVars={{ gateway: grafanaGwVar }}
+              labels={{
+                'api-overview': t('Gateway traffic dashboard'),
+                'api-consumers': t('Consumer dashboard'),
+              }}
+              tempoVars={{ serviceName: 'rhcl-gateway', lookback: '1h' }}
+            />
             <ResourceActionsMenu
               gvk={{ group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' }}
               namespace={ns || ''}

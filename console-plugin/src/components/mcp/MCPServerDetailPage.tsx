@@ -50,6 +50,7 @@ import {
 import { MCPServerRegistrationGVK, HTTPRouteGVK } from '../../models';
 import { MCPServerRegistration, mcpPrefix, mcpReadiness, HTTPRoute } from '../../types';
 import ResourceActionsMenu from '../common/ResourceActionsMenu';
+import ObservabilityMenu from '../common/ObservabilityMenu';
 import { KpiCard } from '../common/kpi';
 import { SectionCard, MetricGrid, Metric, NAValue, SUBTLE } from '../common/dashboardCards';
 import GatewayTopologyFlow, { TopoNode, TopoSeverity } from '../gateways/GatewayTopologyFlow';
@@ -225,14 +226,22 @@ const MCPServerDetailPage: React.FC = () => {
           <Title headingLevel="h1">
             {name} <Label color={ready.color}>{t(ready.label)}</Label>
           </Title>
-          <ResourceActionsMenu
-            gvk={MCPServerRegistrationGVK}
-            namespace={ns || ''}
-            name={name || ''}
-            listHref="/connectivity-link/mcp-servers"
-            resource={server}
-            plural="mcpserverregistrations"
-          />
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <ObservabilityMenu
+              grafanaVars={ref?.name ? { httproute: `${routeNs}.${ref.name}` } : undefined}
+              dashboards={['api-overview', 'api-consumers']}
+              labels={{ 'api-overview': t('Traffic dashboard') }}
+              tempoVars={{ serviceName: 'mcp-gateway-istio', lookback: '1h' }}
+            />
+            <ResourceActionsMenu
+              gvk={MCPServerRegistrationGVK}
+              namespace={ns || ''}
+              name={name || ''}
+              listHref="/connectivity-link/mcp-servers"
+              resource={server}
+              plural="mcpserverregistrations"
+            />
+          </div>
         </div>
 
         <div style={{ marginTop: 10, display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'center' }}>
