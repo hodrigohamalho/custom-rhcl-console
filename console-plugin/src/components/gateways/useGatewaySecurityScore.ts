@@ -177,9 +177,12 @@ export function useGatewaySecurityScore(
             : 'Certificate expired or critically close to expiry.',
       });
     } else if (hasCertRefs) {
-      // HTTPS is terminated with a referenced Secret, but no cert-manager
-      // Certificate backs it (e.g. an OpenShift serving cert). TLS IS applied;
-      // we just can't track its lifecycle — say so honestly, don't penalise.
+      // HTTPS is terminated with a referenced Secret, but the matching
+      // cert-manager Certificate isn't named after the Secret (so it didn't
+      // resolve above). TLS IS applied — if a TLSPolicy is enforced, say so;
+      // otherwise note we can't track the cert lifecycle. Either way, don't
+      // penalise a working HTTPS listener.
+      const tlsPolicy = policies.find((p) => p.policyKind === 'TLSPolicy');
       dimensions.push({
         key: 'tls',
         label: 'TLS',
@@ -187,7 +190,9 @@ export function useGatewaySecurityScore(
         earned: w,
         evaluated: true,
         severity: 'healthy',
-        detail: 'TLS terminated with a referenced certificate (lifecycle not tracked by cert-manager).',
+        detail: tlsPolicy?.isEnforced
+          ? `TLS enforced by TLSPolicy ${tlsPolicy.policy.metadata?.name} (certificate details in the TLS overview).`
+          : 'TLS terminated with a referenced certificate (lifecycle shown in the TLS overview).',
       });
     } else {
       dimensions.push({
