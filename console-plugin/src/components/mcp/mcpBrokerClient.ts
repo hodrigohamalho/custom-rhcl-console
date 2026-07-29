@@ -21,6 +21,12 @@ export interface McpTool {
   inputSchema?: Record<string, unknown>;
 }
 
+export interface McpPrompt {
+  name: string;
+  description?: string;
+  arguments?: { name: string; description?: string; required?: boolean }[];
+}
+
 /** Extract the JSON-RPC payload whether the body is plain JSON or an SSE frame. */
 function parseBody(text: string): { result?: unknown; error?: { message?: string } } | null {
   const dataLines = text
@@ -78,6 +84,21 @@ export async function mcpListTools(session: string): Promise<McpTool[]> {
   if (parsed?.error) throw new Error(parsed.error.message || 'tools/list failed');
   const result = parsed?.result as { tools?: McpTool[] } | undefined;
   return result?.tools || [];
+}
+
+/**
+ * The federated prompt list the broker exposes. Prompts are federated per
+ * server the same way tools are, so callers filter by the server's prefix.
+ * Servers without prompts simply return an empty list (or the broker answers
+ * `-32601 Method not found`, which we treat as "no prompts").
+ */
+export async function mcpListPrompts(session: string): Promise<McpPrompt[]> {
+  const { parsed } = await rpc(session, { id: 4, method: 'prompts/list' });
+  // A broker that doesn't implement prompts returns a JSON-RPC error — that's
+  // "no prompts", not a failure worth surfacing.
+  if (parsed?.error) return [];
+  const result = parsed?.result as { prompts?: McpPrompt[] } | undefined;
+  return result?.prompts || [];
 }
 
 /** Invoke a tool and return its raw result. */

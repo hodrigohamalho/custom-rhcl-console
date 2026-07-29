@@ -66,6 +66,16 @@ import { useGatewayPodHealth } from '../../hooks/useGatewayPodHealth';
 import { useNeedsAttention } from '../../hooks/useNeedsAttention';
 import { useGatewaySecurityScore, SecurityDimension } from './useGatewaySecurityScore';
 import GatewayTopologyFlow, { TopoNode, TopoSeverity } from './GatewayTopologyFlow';
+import {
+  SUCCESS,
+  WARNING,
+  DANGER,
+  SUBTLE,
+  NAValue,
+  SectionCard,
+  MetricGrid,
+  Metric,
+} from '../common/dashboardCards';
 
 // ---------------------------------------------------------------------------
 // Small helpers
@@ -113,11 +123,6 @@ function trendPct(nums: number[]): number | null {
   return ((b - a) / a) * 100;
 }
 
-const SUCCESS = 'var(--pf-t--global--color--status--success--default)';
-const WARNING = 'var(--pf-t--global--color--status--warning--default)';
-const DANGER = 'var(--pf-t--global--color--status--danger--default)';
-const SUBTLE = 'var(--pf-t--global--text--color--subtle)';
-
 function scoreColor(score: number): string {
   if (score >= 90) return SUCCESS;
   if (score >= 70) return WARNING;
@@ -131,48 +136,6 @@ function condSeverity(conditions: K8sCondition[] | undefined, type: string): Sta
   if (c.status === 'False') return 'critical';
   return 'unknown';
 }
-
-/** A greyed "N/A" with a tooltip explaining, honestly, why it's unavailable. */
-const NAValue: React.FC<{ reason: string }> = ({ reason }) => (
-  <Tooltip content={reason}>
-    <span style={{ color: SUBTLE, fontWeight: 600, cursor: 'help' }}>
-      N/A <InfoCircleIcon style={{ fontSize: 11, opacity: 0.6, verticalAlign: 'middle' }} />
-    </span>
-  </Tooltip>
-);
-
-const SectionCard: React.FC<{
-  title: string;
-  icon?: React.ReactNode;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}> = ({ title, icon, action, children }) => (
-  <Card isFullHeight className="rhcl-section-card">
-    <CardBody>
-      <div className="rhcl-section-title">
-        {icon && <span aria-hidden="true">{icon}</span>}
-        <span style={{ flex: 1 }}>{title}</span>
-        {action}
-      </div>
-      {children}
-    </CardBody>
-  </Card>
-);
-
-const MetricGrid: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="rhcl-metric-grid">{children}</div>
-);
-
-const Metric: React.FC<{
-  label: React.ReactNode;
-  value: React.ReactNode;
-  na?: string;
-}> = ({ label, value, na }) => (
-  <div className={na ? 'rhcl-metric-na' : undefined}>
-    <div className="rhcl-metric-label">{label}</div>
-    <div className="rhcl-metric-value">{na ? <NAValue reason={na} /> : value}</div>
-  </div>
-);
 
 // ---------------------------------------------------------------------------
 // Dashboard
