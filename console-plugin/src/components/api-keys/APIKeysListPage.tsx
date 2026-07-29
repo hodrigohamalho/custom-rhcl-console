@@ -36,7 +36,7 @@ import { PlusCircleIcon } from '@patternfly/react-icons';
 import { APIKeyGVK } from '../../models';
 import { APIKey, getAPIKeyPhase } from '../../types';
 import ResourceActionsMenu from '../common/ResourceActionsMenu';
-import CreateAPIKeyModal from './CreateAPIKeyModal';
+import CreateAPIKeyModal, { AUTHORINO_MANAGED_BY_LABEL } from './CreateAPIKeyModal';
 import '../../styles/plugin-glass.css';
 
 /**
@@ -129,15 +129,16 @@ const APIKeysListPage: React.FC = () => {
 
   // ---------- Approval workflow (Kuadrant 1.3 — direct CR mutation) -----
   //
-  // The 1.4+ APIKeyRequest/APIKeyApproval CRDs aren't shipped in 1.3, so we
-  // can't take the upstream "create an Approval CR and let the controller
-  // reconcile" path here. Instead we drive the two state changes directly:
+  // Creating an APIKeyApproval CR does nothing — the kuadrant-operator does not
+  // reconcile it (verified on cluster: an approved=true approval left the key
+  // Pending and inactive for good). What actually gates a key is the
+  // `authorino.kuadrant.io/managed-by` label on its Secret: present → Authorino
+  // accepts the key (<2s), absent → 401. The Create API Key modal creates the
+  // Secret WITHOUT that label (inactive), so we drive activation here:
   //
-  //   1. Approve  → mint an api_key value, create the authorino-managed
-  //                 Secret (same shape the devportal backend would create),
-  //                 then PATCH the APIKey status subresource so the UI
-  //                 reflects the new phase.
-  //   2. Reject   → PATCH the APIKey status subresource only.
+  //   1. Approve  → add the managed-by label to the key's secretRef Secret,
+  //                 then PATCH the APIKey status so the UI reflects the phase.
+  //   2. Reject   → remove the label (deactivate) + PATCH the status.
   //
   // The status patch goes through consoleFetch because the SDK helper for
   // status subresource patching has been flaky across SDK versions; raw
@@ -152,14 +153,43 @@ const APIKeysListPage: React.FC = () => {
     return out;
   }
 
-  async function createApiKeySecret(key: APIKey) {
+  const isNotFound = (e: unknown): boolean => {
+    const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
+    const code = (e as { code?: unknown }).code;
+    return code === 404 || msg.includes('404') || msg.includes('not found');
+  };
+
+  // Approve = add the managed-by label to the key's Secret (activation gate).
+  // The modal already created that Secret inactive with the key value, so we
+  // only flip the label — no new key is minted. Idempotent: re-adding a label
+  // that is already there is a no-op patch.
+  async function activateApiKeySecret(key: APIKey) {
     const ns = key.metadata?.namespace || '';
-    const apiName = key.spec.apiProductRef?.name || 'api';
+    const secretName = key.spec.secretRef?.name;
+    if (!secretName) {
+      throw new Error(
+        `APIKey ${key.metadata?.name} has no spec.secretRef — nothing to activate.`,
+      );
+    }
+    try {
+      await consoleFetch(
+        `/api/kubernetes/api/v1/namespaces/${ns}/secrets/${secretName}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/merge-patch+json' },
+          body: JSON.stringify({
+            metadata: { labels: { [AUTHORINO_MANAGED_BY_LABEL]: 'authorino' } },
+          }),
+        },
+      );
+      return;
+    } catch (e) {
+      if (!isNotFound(e)) throw e;
+    }
+    // Fallback: the Secret is gone (APIKey created out-of-band). Recreate it
+    // active with a fresh key so approve never hard-fails. The `app` label is
+    // derived from the product name (not hardcoded) so this works for any API.
     const userId = key.spec.requestedBy?.userId || 'unknown';
-    // Stable enough to survive re-runs without colliding — re-clicking
-    // approve recreates with the same name and the API returns 409,
-    // which we silently treat as "already approved".
-    const secretName = `apikey-${apiName}-${userId}-${key.metadata?.uid?.slice(0, 8) || 'manual'}`;
     const body = {
       apiVersion: 'v1',
       kind: 'Secret',
@@ -167,8 +197,8 @@ const APIKeysListPage: React.FC = () => {
         name: secretName,
         namespace: ns,
         labels: {
-          app: 'banking-api-apikey',
-          'authorino.kuadrant.io/managed-by': 'authorino',
+          app: `${key.spec.apiProductRef?.name || 'api'}-apikey`,
+          [AUTHORINO_MANAGED_BY_LABEL]: 'authorino',
           'app.kubernetes.io/managed-by': 'custom-rhcl-console',
         },
         annotations: {
@@ -180,16 +210,6 @@ const APIKeysListPage: React.FC = () => {
       type: 'Opaque',
       stringData: { api_key: generateApiKey() },
     };
-    // `consoleFetch` rejects on non-2xx, so we have to catch the AlreadyExists
-    // case explicitly (otherwise a re-click of Approve surfaces a scary error
-    // alert even though the Secret is exactly the state we wanted — and worse,
-    // throwing here means we never reach `patchAPIKeyStatus`, so any APIKey
-    // that was approved by an older buggy build of this plugin stays Pending
-    // forever).
-    //
-    // Match permissively: the k8s API returns the human-readable
-    // "secrets \"foo\" already exists" message, but some SDK versions also
-    // expose a numeric `.code` on the rejected error.
     try {
       await consoleFetch(
         `/api/kubernetes/api/v1/namespaces/${ns}/secrets`,
@@ -198,15 +218,32 @@ const APIKeysListPage: React.FC = () => {
     } catch (e) {
       const msg = (e instanceof Error ? e.message : String(e)).toLowerCase();
       const code = (e as { code?: unknown }).code;
-      if (
-        code === 409 ||
-        msg.includes('409') ||
-        msg.includes('already exists') ||
-        msg.includes('alreadyexists')
-      ) {
-        return; // already approved, idempotent — fall through to status patch
+      if (code === 409 || msg.includes('409') || msg.includes('already exists')) {
+        return; // raced with another approver — the Secret exists, good enough
       }
       throw e;
+    }
+  }
+
+  // Reject = strip the managed-by label so Authorino stops accepting the key
+  // (merge-patch with null deletes the label). No-op if it was never active.
+  async function deactivateApiKeySecret(key: APIKey) {
+    const ns = key.metadata?.namespace || '';
+    const secretName = key.spec.secretRef?.name;
+    if (!secretName) return;
+    try {
+      await consoleFetch(
+        `/api/kubernetes/api/v1/namespaces/${ns}/secrets/${secretName}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/merge-patch+json' },
+          body: JSON.stringify({
+            metadata: { labels: { [AUTHORINO_MANAGED_BY_LABEL]: null } },
+          }),
+        },
+      );
+    } catch (e) {
+      if (!isNotFound(e)) throw e;
     }
   }
 
@@ -249,14 +286,15 @@ const APIKeysListPage: React.FC = () => {
     setPendingActions((prev) => ({ ...prev, [keyId]: true }));
     try {
       if (action === 'Approved') {
-        await createApiKeySecret(key);
+        await activateApiKeySecret(key);
+      } else {
+        await deactivateApiKeySecret(key);
       }
       await patchAPIKeyStatus(key, action);
     } catch (e) {
       // Make failure visible — the row stays Pending and the console gets
       // the error. A toast layer would be nicer; keeping the surface area
       // minimal until we have a shared notification primitive.
-      // eslint-disable-next-line no-console
       console.error(`Failed to ${action.toLowerCase()} ${key.metadata?.name}:`, e);
       alert(`Failed to ${action.toLowerCase()}: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
