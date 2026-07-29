@@ -427,3 +427,124 @@
   color: var(--rhcl-text-subtle);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
 }
+
+/* --------- Gateway Operations Dashboard KPI accents ---------
+ *
+ * The KPI tiles are shared with the Gateway detail page (via
+ * src/components/common/kpi.tsx). Each of its seven tiles maps to one
+ * accent family below, following the same from→to→soft recipe as the
+ * cost page's five.
+ */
+.rhcl-kpi--listeners {
+  --rhcl-accent-from: #22d3ee;
+  --rhcl-accent-to: #67e8f9;
+  --rhcl-accent-soft: rgba(34, 211, 238, 0.22);
+}
+.rhcl-kpi--routes {
+  --rhcl-accent-from: #9c6bff;
+  --rhcl-accent-to: #b07eff;
+  --rhcl-accent-soft: rgba(156, 107, 255, 0.22);
+}
+.rhcl-kpi--backends {
+  --rhcl-accent-from: #2dd4bf;
+  --rhcl-accent-to: #5eead4;
+  --rhcl-accent-soft: rgba(45, 212, 191, 0.22);
+}
+.rhcl-kpi--policies {
+  --rhcl-accent-from: #71e07a;
+  --rhcl-accent-to: #a7f3a9;
+  --rhcl-accent-soft: rgba(113, 224, 122, 0.22);
+}
+.rhcl-kpi--traffic {
+  --rhcl-accent-from: #2b9af3;
+  --rhcl-accent-to: #4cb1ff;
+  --rhcl-accent-soft: rgba(43, 154, 243, 0.22);
+}
+.rhcl-kpi--errors {
+  --rhcl-accent-from: #f0563f;
+  --rhcl-accent-to: #ff8a76;
+  --rhcl-accent-soft: rgba(240, 86, 63, 0.22);
+}
+.rhcl-kpi--security {
+  --rhcl-accent-from: #818cf8;
+  --rhcl-accent-to: #a5b4fc;
+  --rhcl-accent-soft: rgba(129, 140, 248, 0.22);
+}
+
+/* --------- KPI glass inside a `.rhcl-plugin-root` page ---------
+ *
+ * On the Gateway Operations Dashboard the KPI tiles live under
+ * `.rhcl-plugin-root`, whose plugin-glass.css flattens every
+ * `.pf-m-plain` card with a (0,3,0) `!important` rule — which would
+ * strip the KPI cards' surface/border. Re-assert the glass here with a
+ * higher-specificity selector so the accent tiles keep their vitrified
+ * look on that page. The cost page is unaffected (it uses
+ * `.rhcl-cost-root`, which never loads plugin-glass.css).
+ */
+.rhcl-plugin-root .pf-v6-c-card.rhcl-kpi-card.pf-m-plain,
+.rhcl-plugin-root .pf-v5-c-card.rhcl-kpi-card.pf-m-plain {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0) 70%),
+    var(--pf-t--global--background--color--floating--default) !important;
+  border: 1px solid var(--pf-t--global--border--color--default) !important;
+  border-radius: var(--pf-t--global--border--radius--medium) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.2),
+    0 8px 24px -12px rgba(0, 0, 0, 0.35) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.rhcl-plugin-root .pf-v6-c-card.rhcl-kpi-card.pf-m-plain:hover,
+.rhcl-plugin-root .pf-v5-c-card.rhcl-kpi-card.pf-m-plain:hover {
+  transform: translateY(-3px);
+  border-color: var(--rhcl-accent-from, var(--pf-t--global--color--brand--default)) !important;
+}
+
+/* Gateway dashboard: keep the KPI value on one line, not the 2rem
+   uppercase treatment plugin-glass applies to Settings' KPIs. */
+.rhcl-plugin-root .rhcl-kpi-card .rhcl-kpi-value {
+  font-size: 26px;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: -0.02em;
+}
+.rhcl-plugin-root .rhcl-kpi-card .rhcl-kpi-label {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 12px;
+}
+
+/* --------- Gateway dashboard helpers --------- */
+.rhcl-topo-node {
+  min-width: 96px;
+  text-align: center;
+  padding: 10px 12px;
+}
+.rhcl-topo-connector {
+  color: var(--rhcl-text-subtle);
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+.rhcl-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px 20px;
+}
+.rhcl-metric-grid .rhcl-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--rhcl-text-subtle);
+}
+.rhcl-metric-grid .rhcl-metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--pf-t--global--text--color--regular);
+  line-height: 1.2;
+}
+.rhcl-metric-na .rhcl-metric-value {
+  color: var(--rhcl-text-subtle);
+  font-weight: 600;
+}
