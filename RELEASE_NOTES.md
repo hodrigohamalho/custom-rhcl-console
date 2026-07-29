@@ -1,5 +1,47 @@
 # Release Notes — Custom RHCL Console
 
+## v1.4.0 — 2026-07-29
+
+Image: `quay.io/hodrigohamalho/custom-rhcl-console:1.4.0`
+
+MCP Gateway support plus a shift from resource viewers to **operational
+dashboards**. "Real-only, honest gaps": every value is derived from live
+cluster / Prometheus / cert-manager / DNS / broker state; unmeasurable signals
+render as greyed **N/A** and never affect a score.
+
+### Highlights
+
+**MCP Gateway (`mcp.kuadrant.io/v1alpha1`, Technology Preview)**
+- MCP Servers list + detail pages, the **Add MCP Gateway** guided wizard, and an
+  in-console **try-it playground** that reaches the broker through the console
+  proxy (`initialize → tools/list → tools/call` over Streamable HTTP).
+- MCP Server detail is an operations dashboard: KPIs (Tools / Prompts / backend
+  endpoints), Registration + Health, a Client → Broker → Server → Route →
+  Service → Pods topology, a live tools catalog with per-tool **Try**, and a
+  Prompts panel.
+
+**Gateway detail → Operations Dashboard**
+- KPI row (Listeners / Routes / Backends / Policies / Traffic / Errors /
+  **Security score**), Gateway Health + Security Posture + Traffic grid, a
+  topology card-flow, listeners table, policy coverage, live needs-attention
+  alerts, capacity, DNS/TLS health, collapsed deep-dives + Advanced details.
+- **Security score** is a transparent weighted formula over real signals
+  (auth / rate-limit / TLS / DNS / reconciliation); WAF + security headers are
+  shown but excluded from the denominator (not measurable here).
+
+**Reusable Observability menu**
+- One consolidated Grafana / Tempo / Alerts dropdown (`common/ObservabilityMenu`),
+  now shared by the Gateway, HTTPRoute, API Product and MCP Server pages.
+
+**API keys**
+- Real approval gate driven by the Authorino `managed-by` label on the key
+  Secret (the fast, actually-reconciled signal), not the approval CR.
+
+**Shared building blocks**
+- `common/kpi` (KpiCard / RadialRing / Delta / Sparkline / Donut) and
+  `common/dashboardCards` (SectionCard / MetricGrid / Metric / N/A cell) back
+  both the cost page and the new dashboards.
+
 ## v1.3.0 — 2026-07-10
 
 Image: `quay.io/jsimas/custom-rhcl-console:1.3.0`
