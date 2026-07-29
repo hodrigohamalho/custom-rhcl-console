@@ -394,6 +394,7 @@
   "Plans": "Plans",
   "Pods": "Pods",
   "Pods backing this Service ({{ready}}/{{total}} ready)": "Pods backing this Service ({{ready}}/{{total}} ready)",
+  "MCP Servers": "MCP Servers",
   "Policies": "Policies",
   "Policies and their effective impact": "Policies and their effective impact",
   "Policies attached": "Policies attached",
