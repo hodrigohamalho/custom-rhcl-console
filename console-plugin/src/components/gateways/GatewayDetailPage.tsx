@@ -167,4 +167,116 @@ const GatewayDetailPage: React.FC = () => {
   );
 };
 
+// A condition's `lastTransitionTime` is an optional metav1.Time string. When
+// it's absent or a zero/unparseable value, `new Date(...)` lands on the Unix
+// epoch — which is what surfaced as "01/01/1970" in the Status table. Guard
+// those cases and render "-" instead (matching the other cells), and format
+// real timestamps in a readable localized form.
+const formatTransitionTime = (iso?: string): string => {
+  if (!iso) return '-';
+  const ms = new Date(iso).getTime();
+  if (Number.isNaN(ms) || ms <= 0) return '-';
+  return new Date(ms).toLocaleString();
+};
+
+const ConditionsCard: React.FC<{ conditions?: K8sCondition[] }> = ({ conditions }) => {
+  const { t } = useTranslation('plugin__custom-rhcl-console');
+
+  if (!conditions || conditions.length === 0) return null;
+
+  return (
+    <Card>
+      <CardTitle>{t('Status')}</CardTitle>
+      <CardBody>
+        <Table aria-label={t('Status')} variant="compact">
+          <Thead>
+            <Tr>
+              <Th>Type</Th>
+              <Th>{t('Status')}</Th>
+              <Th>Reason</Th>
+              <Th>{t('Message')}</Th>
+              <Th>Last transition</Th>
+            </Tr>
+          </Thead>
+          <Tbody>
+            {conditions.map((c) => (
+              <Tr key={c.type}>
+                <Td>{c.type}</Td>
+                <Td>
+                  <Label
+                    color={c.status === 'True' ? 'green' : c.status === 'False' ? 'red' : 'grey'}
+                  >
+                    {c.status}
+                  </Label>
+                </Td>
+                <Td>{c.reason || '-'}</Td>
+                <Td>{c.message || '-'}</Td>
+                <Td>{formatTransitionTime(c.lastTransitionTime)}</Td>
+              </Tr>
+            ))}
+          </Tbody>
+        </Table>
+      </CardBody>
+    </Card>
+  );
+};
+
+const GatewayRoutesTab: React.FC<{ gatewayName: string; namespace: string }> = ({
+  gatewayName,
+  namespace,
+}) => {
+  const { t } = useTranslation('plugin__custom-rhcl-console');
+
+  const [routes, loaded] = useK8sWatchResource<HTTPRoute[]>({
+    groupVersionKind: HTTPRouteGVK,
+    isList: true,
+  });
+
+  const filteredRoutes = React.useMemo(() => {
+    return (routes || []).filter((r) =>
+      // `r.spec` may be momentarily undefined for a route that was just
+      // delivered by the cache before its spec was filled — guard with `?.`
+      // so the routes tab doesn't crash the whole page.
+      r.spec?.parentRefs?.some(
+        (ref) =>
+          ref.name === gatewayName &&
+          (!ref.namespace || ref.namespace === namespace),
+      ),
+    );
+  }, [routes, gatewayName, namespace]);
+
+  if (!loaded) {
+    return <Spinner size="lg" />;
+  }
+
+  return (
+    <Table aria-label={t('Routes')} variant="compact">
+      <Thead>
+        <Tr>
+          <Th>{t('Name')}</Th>
+          <Th>{t('Namespace')}</Th>
+          <Th>{t('Hostnames')}</Th>
+          <Th>{t('Status')}</Th>
+        </Tr>
+      </Thead>
+      <Tbody>
+        {filteredRoutes.map((route) => (
+          <Tr key={route.metadata?.uid}>
+            <Td>
+              <Link to={`/connectivity-link/httproutes/${route.metadata?.namespace}/${route.metadata?.name}`}>
+                {route.metadata?.name}
+              </Link>
+            </Td>
+            <Td>{route.metadata?.namespace}</Td>
+            <Td>{(route.spec?.hostnames || []).join(', ') || '-'}</Td>
+            <Td>
+              <StatusLabel conditions={route.status?.parents?.[0]?.conditions} />
+            </Td>
+          </Tr>
+        ))}
+      </Tbody>
+    </Table>
+  );
+};
+
 export default GatewayDetailPage;
