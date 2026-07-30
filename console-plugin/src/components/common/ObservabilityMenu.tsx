@@ -91,13 +91,13 @@ export const ObservabilityMenu: React.FC<ObservabilityMenuProps> = ({
       <DropdownList>
         {dashboards.map((d) =>
           links[d].available ? (
+            // Open via window.open, NOT a `component="a"` DropdownItem: PF v6's
+            // DropdownItem swallows the anchor click (only the react-router
+            // <Link> items navigated), so the Grafana deep-links never opened.
             <DropdownItem
               key={d}
               icon={<ExternalLinkAltIcon />}
-              component="a"
-              href={links[d].url ?? '#'}
-              target="_blank"
-              rel="noopener noreferrer"
+              onClick={() => window.open(links[d].url ?? '#', '_blank', 'noopener,noreferrer')}
             >
               {labelFor(d)}
             </DropdownItem>
