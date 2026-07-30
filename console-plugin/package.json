@@ -1,6 +1,6 @@
 {
   "name": "custom-rhcl-console",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Custom console for Red Hat Connectivity Link (RHCL / Kuadrant)",
   "private": true,
   "license": "Apache-2.0",
@@ -78,7 +78,7 @@
   },
   "consolePlugin": {
     "name": "custom-rhcl-console",
-    "version": "1.3.0",
+    "version": "1.4.0",
     "displayName": "Kuadrant Console",
     "description": "Custom console for Red Hat Connectivity Link providing operational visibility into Gateways, HTTPRoutes, policies, and API Products.",
     "exposedModules": {
@@ -98,11 +98,14 @@
       "APIKeysListPage": "./components/api-keys/APIKeysListPage",
       "PlansListPage": "./components/plans/PlansListPage",
       "CostMonitoringPage": "./components/cost/CostMonitoringPage",
+      "AIGatewayPage": "./components/ai/AIGatewayPage",
       "SettingsPage": "./components/settings/SettingsPage",
       "CreateApiWizard": "./components/wizard/CreateApiWizard",
       "DeveloperPortalRedirect": "./components/developer-portal/DeveloperPortalRedirect",
       "developerPortalFlag": "./feature-flags/developerPortalFlag",
       "GRPCRouteListPage": "./components/grpcroutes/GRPCRouteListPage",
+      "MCPServersListPage": "./components/mcp/MCPServersListPage",
+      "MCPServerDetailPage": "./components/mcp/MCPServerDetailPage",
       "DNSTroubleshootingPage": "./components/dns/DNSTroubleshootingPage",
       "DNSOverviewPage": "./components/dns/DNSOverviewPage",
       "TLSTroubleshootingPage": "./components/tls/TLSTroubleshootingPage",

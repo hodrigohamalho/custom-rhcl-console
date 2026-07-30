@@ -4,3 +4,4 @@ export * from './httproute';
 export * from './policies';
 export * from './health';
 export * from './api-products';
+export * from './mcp';

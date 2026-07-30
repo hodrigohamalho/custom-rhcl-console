@@ -220,12 +220,53 @@
   {
     "type": "console.navigation/href",
     "properties": {
+      "id": "connectivity-link-ai-gateway",
+      "name": "%plugin__custom-rhcl-console~AI Gateway%",
+      "href": "/connectivity-link/ai-gateway",
+      "perspective": "admin",
+      "section": "connectivity-link",
+      "insertAfter": "connectivity-link-cost"
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/connectivity-link/ai-gateway",
+      "component": {
+        "$codeRef": "AIGatewayPage"
+      }
+    }
+  },
+  {
+    "type": "console.navigation/separator",
+    "properties": {
+      "id": "connectivity-link-separator-mcp",
+      "perspective": "admin",
+      "section": "connectivity-link",
+      "insertAfter": "connectivity-link-cost"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "connectivity-link-mcp-servers",
+      "name": "%plugin__custom-rhcl-console~MCP Servers%",
+      "href": "/connectivity-link/mcp-servers",
+      "perspective": "admin",
+      "section": "connectivity-link",
+      "insertAfter": "connectivity-link-separator-mcp"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
       "id": "connectivity-link-settings",
       "name": "%plugin__custom-rhcl-console~Settings%",
       "href": "/connectivity-link/settings",
       "perspective": "admin",
       "section": "connectivity-link",
-      "insertAfter": "connectivity-link-cost"
+      "insertAfter": "connectivity-link-mcp-servers"
     }
   },
   {
@@ -494,6 +535,25 @@
       "path": "/connectivity-link/grpcroutes",
       "component": {
         "$codeRef": "GRPCRouteListPage"
+      }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/connectivity-link/mcp-servers",
+      "component": {
+        "$codeRef": "MCPServersListPage"
+      }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "path": "/connectivity-link/mcp-servers/:ns/:name",
+      "component": {
+        "$codeRef": "MCPServerDetailPage"
       }
     }
   }
