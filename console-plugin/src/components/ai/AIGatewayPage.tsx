@@ -33,6 +33,7 @@ import {
   WalletIcon,
   RobotIcon,
   CubesIcon,
+  PlayIcon,
 } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
 import { KpiCard, RadialRing, Sparkline } from '../common/kpi';
@@ -41,6 +42,7 @@ import StatusLabel from '../common/StatusLabel';
 import { OpenInGrafanaButton } from '../common/OpenInGrafanaButton';
 import { useAiTokenGovernance } from '../../hooks/useAiTokenGovernance';
 import { useCostByConsumer } from '../../hooks/useCostByConsumer';
+import AiChatPlayground from './AiChatPlayground';
 import { policyResourceURL } from '../../models';
 import '../../styles/plugin-glass.css';
 
@@ -296,6 +298,14 @@ const AIGatewayPage: React.FC = () => {
                   </div>
                 </div>
               )}
+            </SectionCard>
+          </GridItem>
+        </Grid>
+
+        <Grid hasGutter style={{ marginBottom: 16 }}>
+          <GridItem lg={12}>
+            <SectionCard title={t('Try it — live chat completion')} icon={<PlayIcon />}>
+              <AiChatPlayground />
             </SectionCard>
           </GridItem>
         </Grid>
