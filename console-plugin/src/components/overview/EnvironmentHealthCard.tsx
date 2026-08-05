@@ -137,7 +137,17 @@ export const EnvironmentHealthCard: React.FC<EnvironmentHealthCardProps> = ({
                     }}
                   >
                     <SeverityDot severity={b.severity} />
-                    {t(b.label)}
+                    <span>
+                      <strong
+                        style={{
+                          color: 'var(--pf-v5-global--Color--100)',
+                          fontWeight: 600,
+                        }}
+                      >
+                        {b.count}
+                      </strong>{' '}
+                      {t(b.label)}
+                    </span>
                   </span>
                 </FlexItem>
               ))}

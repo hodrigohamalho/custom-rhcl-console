@@ -1,5 +1,15 @@
 # Release Notes — Custom RHCL Console
 
+## v1.5.1 — 2026-08-05
+
+### Fixes
+- **Overview summary cards**: the status breakdown row (Healthy / Critical /
+  Warning / Enforced / Accepted / Overridden / Detected / Published / Draft /
+  Deprecated …) now shows its **count** next to each label. The counts were
+  computed all along — `EnvironmentHealthCard` was rendering the dot + label but
+  dropping `breakdown.count`, so every legend read as a bare label with no
+  number.
+
 ## v1.5.0 — 2026-07-31
 
 Image: `quay.io/hodrigohamalho/custom-rhcl-console:1.5.0`
