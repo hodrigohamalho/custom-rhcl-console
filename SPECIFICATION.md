@@ -61,7 +61,7 @@ Deliver a custom console for RHCL that:
 | Platform SRE | See cluster-wide RHCL state, debug enforcement | cluster-admin or namespace-scoped admin across all gateway / app namespaces | Technical Resources |
 | App team operator | See only their own namespace's `HTTPRoute`s and the policies that affect them | `view` / `edit` on a single app namespace, plus `get` on the gateway namespace | Technical Resources |
 | API product owner | See traffic, error rate, and auth/rate-limit posture for their product | `view` on app namespaces | **API Products** |
-| PoC reviewer (Banco do Brasil) | Demo the platform without OpenShift CLI | `view` cluster-wide | **API Products** |
+| PoC reviewer | Demo the platform without OpenShift CLI | `view` cluster-wide | **API Products** |
 
 The console provides two interfaces — **Technical Resources** (Gateways,
 HTTPRoutes, Policies, Topology, YAML) and **API Products** (APIProduct list,

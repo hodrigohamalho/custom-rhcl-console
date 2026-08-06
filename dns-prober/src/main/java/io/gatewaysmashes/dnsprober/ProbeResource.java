@@ -1,4 +1,4 @@
-package com.bb.rhcl.dnsprober;
+package io.gatewaysmashes.dnsprober;
 
 import java.time.Duration;
 import java.time.Instant;

@@ -254,7 +254,7 @@ After a few seconds the OpenShift Console reloads and the
 
 By default the plugin's "Open in Grafana" and "View trace" deeplinks look
 for the in-cluster instances provisioned by the
-[rhcl-lab Ansible role](https://github.com/redhat-banco-do-brasil/rhcl-lab):
+RHCL cluster automation (e.g. an Ansible role):
 
 | Default | Namespace | Route |
 |---|---|---|
@@ -285,7 +285,7 @@ data:
 
   # Developer Portal — when set, adds a "Developer Portal" item to the
   # plugin sidebar that opens the URL in a new tab. Omit to hide the item.
-  developerPortalUrl: https://developer-portal.bb.com.br
+  developerPortalUrl: https://developer-portal.example.com
 ```
 
 After applying, restart the plugin pod so the watch picks up the new
