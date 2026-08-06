@@ -1,5 +1,41 @@
 # Release Notes — Custom RHCL Console
 
+## v1.5.1 — 2026-08-05
+
+### Fixes
+- **Overview summary cards**: the status breakdown row (Healthy / Critical /
+  Warning / Enforced / Accepted / Overridden / Detected / Published / Draft /
+  Deprecated …) now shows its **count** next to each label. The counts were
+  computed all along — `EnvironmentHealthCard` was rendering the dot + label but
+  dropping `breakdown.count`, so every legend read as a bare label with no
+  number.
+
+## v1.5.0 — 2026-07-31
+
+Image: `quay.io/hodrigohamalho/custom-rhcl-console:1.5.0`
+
+The AI-gateway story, made interactive.
+
+### Highlights
+
+**AI Gateway lens (`/connectivity-link/ai-gateway`)**
+- New page over a Kuadrant **TokenRateLimitPolicy**: KPIs (token rate, a
+  **token-budget gauge** vs the policy limit, AI requests, throttled 429s,
+  consumers, cost), the policy card (limit / path / enforcement / consumed vs
+  budget), a per-consumer table, and a token-throughput trend.
+- **Try it** — an in-console chat playground: pick a consumer, send a real
+  OpenAI-compatible chat completion **through the gateway** (auth +
+  TokenRateLimitPolicy apply) via a new `ai-chat` plugin proxy, and watch the
+  `usage` tokens come back — or a **live 429** when the shared per-minute token
+  budget is exhausted. A session counter tallies calls + tokens spent.
+- "Real-only, honest gaps": token throughput + budget + throttling are real;
+  per-consumer *requests* are real (istio `x-consumer-id`); per-consumer *token*
+  split is shown as N/A (the app reports usage globally as `anonymous`).
+
+**Observability menu — fix**
+- Grafana deep-links in the consolidated Observability dropdown now open
+  (`window.open`); PF v6 `DropdownItem` was swallowing the anchor click.
+
 ## v1.4.0 — 2026-07-29
 
 Image: `quay.io/hodrigohamalho/custom-rhcl-console:1.4.0`
