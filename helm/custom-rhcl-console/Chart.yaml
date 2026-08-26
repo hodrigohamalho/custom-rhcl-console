@@ -1,0 +1,39 @@
+apiVersion: v2
+name: custom-rhcl-console
+description: OpenShift Console dynamic plugin for Red Hat Connectivity Link (Kuadrant)
+type: application
+version: 0.1.2
+appVersion: "1.3.0"
+icon: https://maximilianoPizarro.github.io/custom-rhcl-console/assets/logo.svg
+home: https://maximilianoPizarro.github.io/custom-rhcl-console/
+sources:
+  - https://github.com/maximilianoPizarro/custom-rhcl-console
+maintainers:
+  - name: Rodrigo Ramalho
+    email: hodrigohamalho@gmail.com
+  - name: Maximiliano Pizarro
+    email: maximiliano.pizarro.5@gmail.com
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/operator: "false"
+  artifacthub.io/category: networking
+  artifacthub.io/links: |
+    - name: Documentation
+      url: https://maximilianoPizarro.github.io/custom-rhcl-console/
+    - name: Source
+      url: https://github.com/maximilianoPizarro/custom-rhcl-console
+    - name: Red Hat Connectivity Link
+      url: https://docs.redhat.com/en/documentation/red_hat_connectivity_link
+    - name: Kuadrant
+      url: https://docs.kuadrant.io/
+    - name: PatternFly
+      url: https://www.patternfly.org/
+    - name: Red Hat UX
+      url: https://ux.redhat.com/
+  artifacthub.io/images: |
+    - name: plugin
+      image: quay.io/maximilianopizarro/custom-rhcl-console:v0.1.2
+      whitelisted: true
+    - name: dns-prober
+      image: quay.io/maximilianopizarro/custom-rhcl-console:dns-prober-v0.1.2
+      whitelisted: true

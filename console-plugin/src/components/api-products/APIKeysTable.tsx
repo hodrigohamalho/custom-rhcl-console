@@ -11,17 +11,20 @@ import {
   Tooltip,
   Flex,
   FlexItem,
+  ClipboardCopy,
+  ClipboardCopyVariant,
 } from '@patternfly/react-core';
+import { EyeIcon, EyeSlashIcon } from '@patternfly/react-icons';
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import {
   useK8sWatchResource,
   useAccessReview,
-  k8sCreate,
+  consoleFetch,
   consoleFetchJSON,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
-import { APIKeyGVK, APIKeyRequestGVK, APIKeyApprovalGVK } from '../../models';
-import { APIKey, APIKeyApproval, APIKeyRequest, getAPIKeyPhase } from '../../types';
+import { APIKeyGVK } from '../../models';
+import { APIKey, getAPIKeyPhase } from '../../types';
 
 interface APIKeysTableProps {
   apiProductName: string;
@@ -71,36 +74,48 @@ const APIKeysTable: React.FC<APIKeysTableProps> = ({
     namespace,
   });
 
-  // Need the APIKeyRequest list too — approval points at requests, not at
-  // APIKeys, and the request name is opaque (`<ns>-<apikey>-<hash>`), so
-  // we have to look it up by `spec.apiKeyRef.name` matching the APIKey.
-  const [apiKeyRequests, requestsLoaded] = useK8sWatchResource<APIKeyRequest[]>({
-    groupVersionKind: APIKeyRequestGVK,
-    isList: true,
+  const [canApprove] = useAccessReview({
+    resource: 'apikeys',
+    group: APIKeyGVK.group,
+    verb: 'patch',
     namespace,
   });
 
-  // RBAC: do we have permission to create APIKeyApproval CRs? If not, the
-  // Approve/Reject buttons stay disabled with a tooltip explaining why.
-  // Note this is `create` on APIKeyApproval (not `update` on APIKey).
-  const [canCreateApproval] = useAccessReview({
-    group: APIKeyApprovalGVK.group,
-    resource: 'apikeyapprovals',
-    verb: 'create',
-    namespace,
-  });
-
-  // The whoami response shape OCP uses for the kube console; missing in
-  // some deployment modes — guard with optional chaining, fall back to the
-  // string "console" so the audit trail still has something useful.
   const [reviewer, setReviewer] = React.useState<string>('console');
   React.useEffect(() => {
     consoleFetchJSON('/apis/user.openshift.io/v1/users/~')
       .then((u: { metadata?: { name?: string } }) => {
         if (u?.metadata?.name) setReviewer(u.metadata.name);
       })
-      .catch(() => undefined); // anonymous / unknown user — keep default
+      .catch(() => undefined);
   }, []);
+
+  const [revealedKeys, setRevealedKeys] = React.useState<Record<string, string>>({});
+  const [revealLoading, setRevealLoading] = React.useState<Record<string, boolean>>({});
+
+  const handleRevealKey = async (key: APIKey) => {
+    const uid = key.metadata?.uid || '';
+    const secretName = key.spec.secretRef?.name;
+    const ns = key.metadata?.namespace || '';
+    if (!secretName) return;
+    if (revealedKeys[uid]) {
+      setRevealedKeys((prev) => { const next = { ...prev }; delete next[uid]; return next; });
+      return;
+    }
+    setRevealLoading((prev) => ({ ...prev, [uid]: true }));
+    try {
+      const secret = await consoleFetchJSON(
+        `/api/kubernetes/api/v1/namespaces/${ns}/secrets/${secretName}`,
+      );
+      const raw = secret?.data?.api_key;
+      const decoded = raw ? atob(raw) : '(empty)';
+      setRevealedKeys((prev) => ({ ...prev, [uid]: decoded }));
+    } catch {
+      setRevealedKeys((prev) => ({ ...prev, [uid]: '(unable to read secret)' }));
+    } finally {
+      setRevealLoading((prev) => { const next = { ...prev }; delete next[uid]; return next; });
+    }
+  };
 
   const filteredKeys = React.useMemo(
     () =>
@@ -110,84 +125,39 @@ const APIKeysTable: React.FC<APIKeysTableProps> = ({
     [apiKeys, apiProductName],
   );
 
-  // Build a quick lookup: APIKey name → APIKeyRequest name. Multiple
-  // requests for the same key would be unusual but we pick the first
-  // match for determinism — the controller normally only ever issues one.
-  const requestByApiKey = React.useMemo(() => {
-    const m = new Map<string, string>();
-    for (const r of apiKeyRequests || []) {
-      const k = r.spec?.apiKeyRef?.name;
-      if (k && !m.has(k)) m.set(k, r.metadata?.name || '');
-    }
-    return m;
-  }, [apiKeyRequests]);
-
-  // Approve/reject action — creates an APIKeyApproval CR. The unique-
-  // looking name buys us idempotency-by-time-window: clicking twice in the
-  // same second creates one CR, clicking again later creates a new audit
-  // entry the controller will collapse to the latest reviewedAt.
+  // Label-based approval: the devportal controller owns `status` and
+  // overwrites console patches when AuthPolicy uses API key auth (no
+  // OIDC). Labels on `metadata` survive controller reconciliation.
   const handleAction = async (
     apiKey: APIKey,
     action: 'Approved' | 'Rejected',
   ) => {
-    const keyName = apiKey.metadata?.name || '';
-    const requestName = requestByApiKey.get(keyName);
-    if (!requestName) {
-      // The request CR was supposed to be auto-created but isn't there yet
-      // — surface the cause to the console instead of failing silently.
-      console.error(
-        `Can't ${action.toLowerCase()} ${keyName}: no APIKeyRequest pointing at it. ` +
-        'Wait a moment and retry; the devportal controller creates the request asynchronously.',
-      );
-      return;
-    }
-
-    const now = new Date().toISOString();
-    const stamp = now.replace(/[:.]/g, '-').toLowerCase();
-    const approval: APIKeyApproval = {
-      apiVersion: `${APIKeyApprovalGVK.group}/${APIKeyApprovalGVK.version}`,
-      kind: APIKeyApprovalGVK.kind,
-      metadata: {
-        // <apikey>-<approved|rejected>-<isotime> — readable in `oc get`
-        // and unique enough that double-clicks don't collide.
-        name: `${keyName}-${action.toLowerCase()}-${stamp}`.slice(0, 253),
-        namespace,
-      },
-      spec: {
-        apiKeyRequestRef: { name: requestName },
-        approved: action === 'Approved',
-        reviewedAt: now,
-        reviewedBy: reviewer,
-        reason: action === 'Approved' ? 'ApprovedByConsole' : 'RejectedByConsole',
-      },
-    };
-
+    const ns = apiKey.metadata?.namespace || '';
+    const name = apiKey.metadata?.name || '';
     try {
-      await k8sCreate({
-        // K8sModel.apiVersion is the VERSION ALONE (e.g. "v1alpha1"), not the
-        // `group/version` pair. apiGroup carries the group. The SDK joins them
-        // into the URL `/apis/{apiGroup}/{apiVersion}/namespaces/{ns}/{plural}`.
-        // Passing "devportal.kuadrant.io/v1alpha1" here would yield a doubled
-        // path and a 404 from the API server — the silent failure that hid the
-        // first iteration of this action.
-        model: {
-          apiVersion: APIKeyApprovalGVK.version,
-          apiGroup: APIKeyApprovalGVK.group,
-          kind: APIKeyApprovalGVK.kind,
-          plural: 'apikeyapprovals',
-          abbr: 'AKA',
-          label: APIKeyApprovalGVK.kind,
-          labelPlural: 'APIKeyApprovals',
-          namespaced: true,
+      await consoleFetch(
+        `/api/kubernetes/apis/${APIKeyGVK.group}/${APIKeyGVK.version}/namespaces/${ns}/apikeys/${name}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/merge-patch+json' },
+          body: JSON.stringify({
+            metadata: {
+              labels: { 'devportal.kuadrant.io/phase': action },
+              annotations: {
+                'devportal.kuadrant.io/reviewed-by': reviewer,
+                'devportal.kuadrant.io/reviewed-at': new Date().toISOString(),
+              },
+            },
+          }),
         },
-        data: approval,
-      });
+      );
     } catch (e) {
-      console.error(`Failed to ${action.toLowerCase()} API key ${keyName}:`, e);
+      // eslint-disable-next-line no-console
+      console.error(`Failed to ${action.toLowerCase()} API key ${name}:`, e);
     }
   };
 
-  const loaded = keysLoaded && requestsLoaded;
+  const loaded = keysLoaded;
   if (!loaded) {
     return (
       <Card>
@@ -216,6 +186,7 @@ const APIKeysTable: React.FC<APIKeysTableProps> = ({
                 <Th>{t('Requester')}</Th>
                 <Th>{t('Plan')}</Th>
                 <Th>{t('Phase')}</Th>
+                <Th>{t('API Key')}</Th>
                 <Th>{t('Created')}</Th>
                 {approvalMode === 'manual' && <Th>{t('Actions')}</Th>}
               </Tr>
@@ -224,7 +195,6 @@ const APIKeysTable: React.FC<APIKeysTableProps> = ({
               {filteredKeys.map((key) => {
                 const phase = getAPIKeyPhase(key);
                 const isPending = phase === 'Pending';
-                const hasRequest = !!requestByApiKey.get(key.metadata?.name || '');
 
                 return (
                   <Tr key={key.metadata?.uid}>
@@ -235,6 +205,38 @@ const APIKeysTable: React.FC<APIKeysTableProps> = ({
                         {t(phase)}
                       </Label>
                     </Td>
+                    <Td>
+                      {phase === 'Approved' && key.spec.secretRef?.name ? (
+                        revealedKeys[key.metadata?.uid || ''] ? (
+                          <Flex spaceItems={{ default: 'spaceItemsSm' }} alignItems={{ default: 'alignItemsCenter' }}>
+                            <FlexItem flex={{ default: 'flex_1' }}>
+                              <ClipboardCopy isReadOnly variant={ClipboardCopyVariant.expansion} isCode>
+                                {revealedKeys[key.metadata?.uid || '']}
+                              </ClipboardCopy>
+                            </FlexItem>
+                            <FlexItem>
+                              <Button variant="plain" size="sm" onClick={() => handleRevealKey(key)} aria-label={t('Hide key')}>
+                                <EyeSlashIcon />
+                              </Button>
+                            </FlexItem>
+                          </Flex>
+                        ) : (
+                          <Button
+                            variant="link"
+                            size="sm"
+                            isLoading={revealLoading[key.metadata?.uid || '']}
+                            onClick={() => handleRevealKey(key)}
+                            icon={<EyeIcon />}
+                          >
+                            {t('Reveal Key')}
+                          </Button>
+                        )
+                      ) : (
+                        <span style={{ color: 'var(--pf-t--global--color--nonstatus--gray--default)', fontSize: 12 }}>
+                          {phase === 'Pending' ? t('Pending approval') : '-'}
+                        </span>
+                      )}
+                    </Td>
                     <Td>{key.metadata?.creationTimestamp || '-'}</Td>
                     {approvalMode === 'manual' && (
                       <Td>
@@ -243,12 +245,8 @@ const APIKeysTable: React.FC<APIKeysTableProps> = ({
                             <FlexItem>
                               <ActionButton
                                 kind="primary"
-                                disabled={!canCreateApproval || !hasRequest}
-                                tooltipWhenDisabled={
-                                  !canCreateApproval
-                                    ? t('You do not have permission to approve API keys')
-                                    : t('APIKeyRequest not yet observed — wait and retry')
-                                }
+                                disabled={!canApprove}
+                                tooltipWhenDisabled={t('You do not have permission to approve API keys')}
                                 onClick={() => handleAction(key, 'Approved')}
                                 label={t('Approve')}
                               />
@@ -256,12 +254,8 @@ const APIKeysTable: React.FC<APIKeysTableProps> = ({
                             <FlexItem>
                               <ActionButton
                                 kind="danger"
-                                disabled={!canCreateApproval || !hasRequest}
-                                tooltipWhenDisabled={
-                                  !canCreateApproval
-                                    ? t('You do not have permission to reject API keys')
-                                    : t('APIKeyRequest not yet observed — wait and retry')
-                                }
+                                disabled={!canApprove}
+                                tooltipWhenDisabled={t('You do not have permission to reject API keys')}
                                 onClick={() => handleAction(key, 'Rejected')}
                                 label={t('Reject')}
                               />

@@ -1,0 +1,105 @@
+name: Helm chart publish
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+    paths:
+      - "helm/**"
+      - "docs/index.html"
+      - "docs/artifacthub-repo.yml"
+      - ".github/workflows/helm-publish.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Lint chart
+        run: helm lint helm/custom-rhcl-console
+
+      - name: Template chart (smoke)
+        run: |
+          helm template custom-rhcl-console helm/custom-rhcl-console \
+            --namespace custom-rhcl-console \
+            --set consolePlugin.patchConsole=false \
+            > /tmp/rendered.yaml
+          test -s /tmp/rendered.yaml
+          grep -q 'kind: ConsolePlugin' /tmp/rendered.yaml
+          grep -q 'kind: Deployment' /tmp/rendered.yaml
+
+  publish-docs:
+    needs: lint
+    if: >
+      (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')) &&
+      !contains(github.event.head_commit.message, 'chore: publish Helm chart')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
+      - name: Resolve chart version
+        id: version
+        run: |
+          source scripts/lib/version.sh
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Package chart into docs/
+        env:
+          HELM_REPO_URL: https://maximilianoPizarro.github.io/custom-rhcl-console
+        run: |
+          mkdir -p docs
+          # Single version only: drop previous chart packages so Artifact Hub
+          # does not keep invalid historical entries (e.g. bad category).
+          rm -f docs/custom-rhcl-console-*.tgz
+          helm package helm/custom-rhcl-console --destination docs/
+          helm repo index docs/ --url "${HELM_REPO_URL}"
+          test -f "docs/custom-rhcl-console-${{ steps.version.outputs.version }}.tgz"
+          test -f docs/index.yaml
+          test -f docs/artifacthub-repo.yml
+          test -f docs/index.html
+          # Guard: index must list exactly one chart version
+          versions=$(grep -c '^    version:' docs/index.yaml || true)
+          if [ "${versions}" != "1" ]; then
+            echo "Expected exactly 1 chart version in docs/index.yaml, found ${versions}"
+            cat docs/index.yaml
+            exit 1
+          fi
+
+      - name: Commit and push docs/ Helm repo
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git add docs/*.tgz docs/index.yaml docs/artifacthub-repo.yml docs/index.html
+          if git diff --staged --quiet; then
+            echo "No Helm/docs changes to publish."
+            exit 0
+          fi
+          git commit -m "chore: publish Helm chart v${VERSION} to docs/"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
